@@ -7,8 +7,17 @@ and formatting data into a format usable with tensorflow.
 import logging  # for logging
 import os  # for current directory dir
 import sqlite3  # for working with the database
+from random import shuffle  # for shuffle of the task-sets
+
+import numpy as np  # for arrays
 
 TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
+TASK_PKG_DICT = {
+    'cond_mod': [1, 0, 0, 0],
+    'hey': [0, 1, 0, 0],
+    'pi': [0, 0, 1, 0],
+    'tumatmul': [0, 0, 0, 1]
+}
 
 
 class Database():
@@ -84,8 +93,11 @@ class Database():
             logger.debug("No task-set read!")
             return None
 
+        # shuffle rows
+        shuffle(rows)
+
         # limit number of rows
-        rows = rows[:10]
+        #rows = rows[:1000]
 
         tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
         labels = [x[1] for x in rows]  # list with corresponding labels
@@ -93,15 +105,28 @@ class Database():
         task_attributes_dict = self.read_task_attributes()  # get dictionary with task attributes
 
         # replace task-ids with task attributes
-        for taskset in tasksets:    # iterate over all task-sets
-            for i in range(len(taskset)):    # iterate over all tasks
-                if taskset[i] is not -1:   # valid task-id
-                    taskset[i] = 99
+        for i, taskset in enumerate(tasksets):  # iterate over all task-sets
+            taskset = list(taskset)  # convert taskset-tuple to list
 
-            print(taskset)
+            # TODO: remove all tasks with id = -1
+            # while taskset.count(-1) > 0:
+            #     taskset.remove(-1)
 
+            if taskset:  # at least one task is left
+                new_taskset = []    # create empty task-set
 
-        return tasksets, labels
+                # replace Task_ID with task attributes
+                for j, task_id in enumerate(taskset):
+                    # append task attributes to taskset-array
+                    new_taskset.extend(task_attributes_dict[task_id])
+
+                # replace task-set in task-set list
+                tasksets[i] = np.asarray(new_taskset, np.float32)
+
+        tasksets_np = np.asarray(tasksets, np.float64)
+        labels_np = np.asarray(labels, np.int64)
+
+        return tasksets_np, labels_np
 
     def read_task_attributes(self):
         """Read the attributes of all tasks from the database.
@@ -110,7 +135,7 @@ class Database():
         Currently the following attributes are considered (defined in TASK_ATTRIBUTES):
             Task_ID -- id of the task
             Priority -- priority of the task
-            PKG -- PKG of the task
+            PKG -- PKG of the task -> one-hot-encoding
             Arg -- argument of the task
             CRITICALTIME -- deadline of the task
             Period -- period of the task
@@ -119,7 +144,7 @@ class Database():
 
         Return:
             task_dict -- dictionary with all tasks and their attributes
-                         (key = Task_ID, value = tuple of attributes)
+                         (key = Task_ID, value = list of attributes)
         """
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_task_attributes")
@@ -138,7 +163,16 @@ class Database():
 
         task_dict = dict()  # create empty dictionary
 
+        # TODO: delete task with id = -1
+        task_dict[-1] = [0] * 9
+
         for row in rows:  # iterate over all tasks
+            row = list(row)  # convert tuple to list
+
+            # replace PKG with one-hot encoding vector
+            pkg = TASK_PKG_DICT[row[2]]
+            row = row[:2] + pkg + row[3:]
+
             task_dict[row[0]] = row[1:]  # add task to dictionary
 
         return task_dict
