@@ -28,3 +28,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print("Main function of RNN-SA/main.py")
