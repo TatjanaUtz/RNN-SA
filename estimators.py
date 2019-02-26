@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     # import data to memory
     my_database = Database()
-    tasksets, labels = my_database.read_all_tasksets()
+    tasksets, labels = my_database.read_all_tasksets_2D()
     my_dataset = Dataset(tasksets, labels)
 
     # pass this data to input function
