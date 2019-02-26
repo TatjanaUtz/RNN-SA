@@ -38,15 +38,15 @@ def init_logging():
     return logger
 
 
-def log_results(name, hyperparams, res):
+def log_results(name, res, hyperparams=None):
     """Log results of a recurrent neural network.
 
     Overview of the results of a recurrent neural network is printed.
 
     Args:
         name -- name of the recurrent network
-        hyperparams -- dictionary of the used hyperparameters
         res -- dictionary with the results (e.g. F1 Score, Accuracy Score, Recall, Precision)
+        hyperparams -- dictionary of the used hyperparameters
     """
     # create logger
     logger = logging.getLogger('RNN-SA.logging_config.py.log_results')
@@ -55,13 +55,14 @@ def log_results(name, hyperparams, res):
     if not isinstance(name, str):  # invalid argument for name
         logger.error("Invalid argument for 'name': is %s but must be <class 'str'>!", type(name))
         return
-    if not isinstance(hyperparams, dict):  # invalid argument for hyperparameters
-        logger.error("Invalid argument for 'hyperparameters': is %s but must be <class 'dict'>!",
-                     type(hyperparams))
-        return
     if not isinstance(res, dict):  # invalid argument for results
         logger.error("Invalid argument for 'results': %s but must be <class 'dict'>!",
                      type(res))
+        return
+    if hyperparams is not None and not isinstance(hyperparams,
+                                                  dict):  # invalid argument for hyperparameters
+        logger.error("Invalid argument for 'hyperparameters': is %s but must be <class 'dict'>!",
+                     type(hyperparams))
         return
 
     # log results to a file
@@ -72,8 +73,9 @@ def log_results(name, hyperparams, res):
 
     # log hyperparameter
     log_file.write("------- Hyperparameter ------- \n")
-    for key in hyperparams:  # loop over all hyperparameters
-        log_file.write(key + ": " + str(hyperparams[key]) + "\n")
+    if hyperparams is not None:
+        for key in hyperparams:  # loop over all hyperparameters
+            log_file.write(key + ": " + str(hyperparams[key]) + "\n")
     log_file.write("\n")
 
     # log results
