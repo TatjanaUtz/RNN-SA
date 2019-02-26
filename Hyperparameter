@@ -1,0 +1,7 @@
+LSTM-Zelle
+num_units       number of units in the LSTM cell
+use_peepholes   enable/disable diagonal/peephole connections
+initializer     initializer to use for weight and projection matrices
+activation      activation function of the inner states
+learning_rate   learning rate
+optimizer
