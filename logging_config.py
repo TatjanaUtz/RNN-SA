@@ -1,6 +1,8 @@
 """Configurations for logging."""
 import logging
 
+LOG_FILE_NAME = "results.log"
+
 
 def init_logging():
     """Initializes logging.
@@ -30,3 +32,32 @@ def init_logging():
     logger.addHandler(log_console_handler)
 
     return logger
+
+def log_results(name):
+    """Log results of a recurrent neural network.
+
+    Overview of the results of a recurrent neural network is printed.
+
+    Args:
+        name -- name of the recurrent network
+    """
+    # create logger
+    logger = logging.getLogger('RNN-SA.logging_config.py.log_results')
+
+    # check input arguments
+    if not isinstance(name, str):   # invalid argument for name
+        logger.error("Invalid argument for 'name': is %s but must be string!", type(name))
+        return
+
+    # log results to a file
+    log_file = open(LOG_FILE_NAME, 'a+')
+    log_file.writable("\n")
+    title_string = "---------- " + name + " ----------"
+    log_file.writable(title_string + "\n")
+    # TODO: log results and hyperparameter
+    log_file.write("-" * len(title_string) + "\n")
+
+    # Print results to console
+    logger.info(title_string)
+    # TODO: print results
+    logger.info("-" * len(title_string))
