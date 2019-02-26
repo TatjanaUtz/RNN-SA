@@ -7,7 +7,6 @@ import time
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
-from tensorflow.contrib import rnn
 
 from logging_config import log_results
 
@@ -16,7 +15,7 @@ class Single_LSTM_Model:
     """Single LSTM Model."""
 
     def __init__(self, epochs=8, n_classes=1, hidden_dim=200, n_features=36, sequence_length=4,
-                 batch_size=35, input_dim=9):
+                 batch_size=35, input_dim=9, num_cells=1):
         """Constructor."""
 
         # specify hyperparameters
@@ -29,6 +28,7 @@ class Single_LSTM_Model:
         self.n_features = n_features  # number of features in the dataset
         self.batch_size = batch_size  # size of each batch of data that is feed into the model
         self.learning_rate = 0.001  # learning rate
+        self.num_cells = 1  # number of LSTM cells
 
         # define shapes of weights and biases manually
         # random value of shape [rnn_size, n_classes] and [n_classes]
@@ -83,21 +83,30 @@ class Single_LSTM_Model:
         # run the cell on the input to obtain tensors for outputs and states
         # outputs = outputs of the LSTM layer for each time step
         # states = value of last state of both the hidden states (h and c)
-        outputs, states = tf.nn.dynamic_rnn(
+        outputs, states = tf.nn.static_rnn(
             cell=lstm_cell,  # an instance of RNNCell
-            inputs=self.x,  # the RNN inputs
-            sequence_length=None,  # an int vector sized [batch_size], used to copy-through state
-            # and zero-out outputs when past a batch element's sequence length
+            inputs=self.x,
+            # a length T list of inputs, each a tensor of shape [batch_size, input_size]
             initial_state=None,  # an initial state for the RNN
-            dtype=tf.float32,  # the data type for the initial state and expected output
-            parallel_iterations=32,
-            # number of iterations to run in parallel (trade-off between time and memory)
-            swap_memory=False,  # transparently swap the tensors produced in forward inference but
-            # needed for back prop from GPU to CPU
-            time_major=False,  # shape format of the inputs and outputs tensors,
-            # True = [max_time, batch_size, depth], False = [batch_size, max_time, depth]
-            scope="rnn"  # VariableScope for the created subgraph
+            dtype=tf.float32,  # data type for the initial state and expected output
+            sequence_length=None,  # specifies the length of each sequence in inputs
+            scope=None  # VariableScope for the created subgraph
         )
+        # outputs, states = tf.nn.dynamic_rnn(
+        #     cell=lstm_cell,  # an instance of RNNCell
+        #     inputs=self.x,  # the RNN inputs
+        #     sequence_length=None,  # an int vector sized [batch_size], used to copy-through state
+        #     # and zero-out outputs when past a batch element's sequence length
+        #     initial_state=None,  # an initial state for the RNN
+        #     dtype=tf.float32,  # the data type for the initial state and expected output
+        #     parallel_iterations=32,
+        #     # number of iterations to run in parallel (trade-off between time and memory)
+        #     swap_memory=False,  # transparently swap the tensors produced in forward inference but
+        #     # needed for back prop from GPU to CPU
+        #     time_major=False,  # shape format of the inputs and outputs tensors,
+        #     # True = [max_time, batch_size, depth], False = [batch_size, max_time, depth]
+        #     scope=None  # VariableScope for the created subgraph
+        # )
 
         # take only the last output of the LSTM layer, multiply it with the previouly defined
         # weight matrix and add the bias value
@@ -202,81 +211,129 @@ class Single_LSTM_Model:
                         {"F1 Score": f1, "Accuracy Score": accuracy, "Recall": recall,
                          "Precision": precision})
 
+class dynamic_Single_LSTM_Model:
+    """Single LSTM Model."""
 
-class Single_GRU_Model:
-    """Model with single GRU-cell."""
-
-    def __init__(self, epochs=8, n_classes=1, n_units=200, n_features=36, sequence_length=4,
-                 batch_size=35):
+    def __init__(self, epochs=8, n_classes=1, hidden_dim=200, n_features=36, sequence_length=4,
+                 batch_size=35, input_dim=9, num_cells=1):
         """Constructor."""
+
         # specify hyperparameters
+        self.input_dim = input_dim  # dimension of each element of the sequence
+        self.sequence_length = sequence_length  # length of each sequence
+        self.hidden_dim = hidden_dim  # size of RNN hidden dimension = hidden state (both c and h)
+
         self.epochs = epochs  # number of iterations to run the data set through the model
         self.n_classes = n_classes  # number of classes (binary classification: 0 = not schedulable, 1 = schedulable)
-        self.n_units = n_units  # size of hidden state of the LSTM (both c and h)
         self.n_features = n_features  # number of features in the dataset
-        self.sequence_length = sequence_length  # length of the sequence
         self.batch_size = batch_size  # size of each batch of data that is feed into the model
+        self.learning_rate = 0.001  # learning rate
+        self.num_cells = num_cells  # number of LSTM cells
 
-        # define placeholders for data-batches
-        self.xplaceholder = tf.placeholder('float', [None, self.n_features])
-        self.yplaceholder = tf.placeholder('float')
-
-    def recurrent_neural_network_model(self):
-        """Design a LSTM model."""
         # define shapes of weights and biases manually
         # random value of shape [rnn_size, n_classes] and [n_classes]
         # automatically do this: https://www.tensorflow.org/api_docs/python/tf/contrib/layers/fully_connected
-        layer = {'weights': tf.Variable(tf.random_normal([self.n_units, self.n_classes])),
-                 'bias': tf.Variable(tf.random_normal([self.n_classes]))}
+        self.layer = {'weights': tf.Variable(tf.random_normal([self.hidden_dim, self.n_classes])),
+                      'bias': tf.Variable(tf.random_normal([self.n_classes]))}
 
-        # assign data to x as a sequence: split feature batch along vertical dimension (=1) into 29 slices
-        # each slice is an element of the sequence given as input to the LSTM layer
-        # (shape of one element of  sequence: [batch_size, num_features / sequence_length])
-        x = tf.split(self.xplaceholder, self.sequence_length, 1)
-        print(x)  # TODO: delete or replace with logger
+        # create placeholders for input data and labels
+        self.xplaceholder = tf.placeholder(tf.float32, [None, 4, 9])
+        self.yplaceholder = tf.placeholder(tf.float32)
 
-        # create LSTM layer and instantiate variables for all gates
-        gru_cell = tf.nn.rnn_cell.GRUCell(self.n_units)
+        # define the cost function:
+        # sigmoid_cross_entropy_with_logits because of binary classification
+        self.cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            logits=self.model(),  # tensor of type float32 or float64
+            labels=self.yplaceholder  # tensor of the same type and shape as logits
+        ))
 
+        # pass cost to the optimizer:
+        # AdamOptimizer because of fairly better performance
+        self.optimizer = tf.train.AdamOptimizer(
+            learning_rate=self.learning_rate  # the learning rate
+        ).minimize(self.cost)
+
+        # auxiliary ops
+        self.saver = tf.train.Saver()
+
+    def model(self):
+        """Model function."""
+
+        # create LSTM cell
+        lstm_cell = tf.nn.rnn_cell.LSTMCell(
+            num_units=self.hidden_dim,  # number of units in the LSTM cell
+            use_peepholes=False,  # enable/disable diagonal/peephole connections
+            cell_clip=None,
+            # cell state is clipped by this value prior to the cell output activation
+            initializer=None,  # initializer to use for weight and projection matrices
+            num_proj=None,  # output dimensionality for the projection matrices
+            proj_clip=None,
+            # the projected values are clipped elementwise to within [-proj_clip, proj_clip]
+            forget_bias=1.0,  # biases of the forget gate
+            activation=None,  # activation function of the inner states
+            reuse=None,  # whether to reuse variables in an existing scope
+        )
+
+        # run the cell on the input to obtain tensors for outputs and states
         # outputs = outputs of the LSTM layer for each time step
         # states = value of last state of both the hidden states (h and c)
-        outputs, states = rnn.static_rnn(gru_cell, x, dtype=tf.float32)
+        # outputs, states = tf.nn.static_rnn(
+        #     cell=lstm_cell,  # an instance of RNNCell
+        #     inputs=self.x,
+        #     # a length T list of inputs, each a tensor of shape [batch_size, input_size]
+        #     initial_state=None,  # an initial state for the RNN
+        #     dtype=tf.float32,  # data type for the initial state and expected output
+        #     sequence_length=None,  # specifies the length of each sequence in inputs
+        #     scope=None  # VariableScope for the created subgraph
+        # )
+        outputs, states = tf.nn.dynamic_rnn(
+            cell=lstm_cell,  # an instance of RNNCell
+            inputs=self.xplaceholder,  # the RNN inputs
+            sequence_length=None,  # an int vector sized [batch_size], used to copy-through state
+            # and zero-out outputs when past a batch element's sequence length
+            initial_state=None,  # an initial state for the RNN
+            dtype=tf.float32,  # the data type for the initial state and expected output
+            parallel_iterations=32,
+            # number of iterations to run in parallel (trade-off between time and memory)
+            swap_memory=False,  # transparently swap the tensors produced in forward inference but
+            # needed for back prop from GPU to CPU
+            time_major=False,  # shape format of the inputs and outputs tensors,
+            # True = [max_time, batch_size, depth], False = [batch_size, max_time, depth]
+            scope=None  # VariableScope for the created subgraph
+        )
 
-        # take only the last output of the LSTM layer, multiply it with the previouly defined weight matrix
-        # and add the bias value
+        # take only the last output of the LSTM layer
+        # outputs[-1] isn't supported by tensorflow
+        outputs = tf.transpose(outputs, [1, 0, 2])
+        last_output = tf.gather(outputs, int(outputs.get_shape()[0]) - 1)
+        # last_output = outputs[-1]
+
+        # multiply last output with the previously defined weight matrix and add the bias value
         # result = logit value of forward propagation
-        output = tf.matmul(outputs[-1], layer['weights']) + layer['bias']
+        logit = tf.matmul(last_output, self.layer['weights']) + self.layer['bias']
 
-        # return logit value
-        return output
-
-    def train_neural_network(self, X_train, y_train, X_test, y_test):
-        """Train and test LSTM model."""
-        '''TRAINING'''
-        # get logit value = inverse of activation
-        logit = self.recurrent_neural_network_model()
-        # reshape matrix into vector (shape of labels and logits should be equal for feeding into cost function)
+        # reshape matrix into vector (shape of labels and logits should be equal for feeding into
+        # cost function)
         logit = tf.reshape(logit, [-1])
 
-        # define the cost function
-        # sigmoid_cross_entropy_with_logits: because of binary classification
-        # (for multi class classification: softmax_cross_entropy_with_logits)
-        cost = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=logit, labels=self.yplaceholder))
-        # pass cost to the optimizer
-        # AdamOptimizer: because of fairly better performance
-        optimizer = tf.train.AdamOptimizer().minimize(cost)
+        # return reshaped logit value
+        return logit
 
-        # create tensorflow session
+    def train(self, X_train, y_train):
+        """Train function."""
+        # create logger
+        logger = logging.getLogger('RNN-SA.models.Single_LSTM_Model.train')
+
         with tf.Session() as sess:
 
             # initialize all global and local variables
+            tf.get_variable_scope().reuse_variables()
             tf.global_variables_initializer().run()
             tf.local_variables_initializer().run()
 
             # loop over number of iterations (epochs)
             for epoch in range(self.epochs):
-                # stop start time
+                # save start time
                 start_time = time.time()
 
                 # reset epoch loss to 0
@@ -284,6 +341,7 @@ class Single_GRU_Model:
 
                 # define variable to keep track of start and end computation when splitting data into batches
                 i = 0
+
                 # Loop over number of batches
                 for step in range(int(len(X_train) / self.batch_size)):
                     # keep track from where data was split in each iteration
@@ -297,11 +355,13 @@ class Single_GRU_Model:
                     # tell tensorflow to run the subgraph necessary to compute the optimizer and the
                     # cost by feeding the values in batch_x and batch_y to the placeholders
                     # compute value of optimizer and cost and assign them to the variables
-                    _, c = sess.run([optimizer, cost],
+                    _, c = sess.run([self.optimizer, self.cost],
                                     feed_dict={self.xplaceholder: batch_x,
                                                self.yplaceholder: batch_y})
+
                     # add loss of current batch to epoch_loss
                     epoch_loss += c
+
                     # raise iterator through data batches
                     i += self.batch_size
 
@@ -309,100 +369,48 @@ class Single_GRU_Model:
                 stop_time = time.time()
 
                 # print total loss of epoch
-                print('Epoch', epoch, 'completed out of', self.epochs, 'loss:',
-                      epoch_loss)  # TODO: delete or replace with logger
-                print('Time elapsed: ', stop_time - start_time)
+                logger.info("Epoch %d completed out of %d, loss = %f", epoch, self.epochs,
+                            epoch_loss)
+                logger.info("Time elapsed: %f", stop_time - start_time)
 
-            '''TESTING'''
-            # feed testing data set into the model and tell tensorflow to run the subgraph necessary to
-            # compute logit
+            # Save model
+            self.save_path = os.path.join(os.getcwd(), 'single_lstm_model.ckpt')
+            self.saver.save(sess, self.save_path)
+
+    def test(self, X_test, y_test):
+        """Test function."""
+        with tf.Session() as sess:
+            tf.get_variable_scope().reuse_variables()
+
+            # Load saved model
+            self.saver.restore(sess, self.save_path)
+
+            # feed testing data set into the model and tell tensorflow to run the subgraph necessary
+            # to compute logit
             # pass logit value through a sigmoid activation to get prediction
             # round off to remove decimal places of predicted values
-            pred = tf.round(tf.nn.sigmoid(logit)).eval(
-                {self.xplaceholder: np.array(X_test), self.yplaceholder: np.array(y_test)})
+            pred = tf.round(tf.nn.sigmoid(self.model())).eval(
+                {self.xplaceholder: np.array(X_test),
+                 self.yplaceholder: np.array(y_test)})
+
             # calculate F1 score = weighted average of precision and recall
             f1 = f1_score(np.array(y_test), pred, average='macro')
+
             # calculate accurarcy score
             accuracy = accuracy_score(np.array(y_test), pred)
+
             # calculate recall = ratio of correctly predicted positive observations to all positive observations
             recall = recall_score(y_true=np.array(y_test), y_pred=pred)
+
             # calculate precision = ratio of correctly predicted positive observations to total predicted positive observations
             precision = precision_score(y_true=np.array(y_test), y_pred=pred)
+
             # print out all calculated scores
-            # TODO: delete or replace with logger
-            print("F1 Score:", f1)
-            print("Accuracy Score:", accuracy)
-            print("Recall:", recall)
-            print("Precision:", precision)
+            log_results("Single LSTM Model",
+                        {"F1 Score": f1, "Accuracy Score": accuracy, "Recall": recall,
+                         "Precision": precision})
 
-
-class SeriesPredictor:
-    """Example for LSTM from Machine Learning with TensorFlow."""
-
-    def __init__(self, input_dim, seq_size, hidden_dim=10):
-        # hyperparameters
-        self.input_dim = input_dim
-        self.seq_size = seq_size
-        self.hidden_dim = hidden_dim
-
-        # weight variables and input placeholder
-        self.W_out = tf.Variable(tf.random_normal([hidden_dim, 1]),
-                                 name='W_out')
-        self.b_out = tf.Variable(tf.random_normal([1]), name='b_out')
-        self.x = tf.placeholder(tf.float32, [None, seq_size, input_dim])
-        self.y = tf.placeholder(tf.float32, [None, seq_size])
-
-        # cost optimizer
-        self.cost = tf.reduce_mean(tf.square(self.model() - self.y))
-        self.train_op = tf.train.AdamOptimizer().minimize(self.cost)
-
-        # auxiliary ops
-        self.saver = tf.train.Saver()
-
-    def model(self):
-        """
-        :param x: inputs of size [T, batch_size, input_size]
-        :param W: matrix of fully-connected output layer weights
-        :param b: vector of fully-connected output layer biases
-        """
-        # create an LSTM cell
-        cell = rnn.BasicLSTMCell(self.hidden_dim)
-
-        # run the cell on the input to obtain tensors for outputs and states
-        outputs, states = tf.nn.dynamic_rnn(cell, self.x, dtype=tf.float32)
-
-        num_examples = tf.shape(self.x)[0]
-
-        # compute the output layer as a fully connected linear function
-        W_repeated = tf.tile(tf.expand_dims(self.W_out, 0), [num_examples, 1, 1])
-
-        out = tf.matmul(outputs, W_repeated) + self.b_out
-        out = tf.squeeze(out)
-        return out
-
-    def train(self, train_x, train_y):
-        with tf.Session() as sess:
-            tf.get_variable_scope().reuse_variables()
-            sess.run(tf.global_variables_initializer())
-
-            # run the train op 1'000 times
-            for i in range(1000):
-                _, mse = sess.run([self.train_op, self.cost],
-                                  feed_dict={self.x: train_x, self.y: train_y})
-                if i % 100 == 0:
-                    print(i, mse)
-            save_path = self.saver.save(sess, 'model.ckpt')
-            print('Model saved to {}'.format(save_path))
-
-    def test(self, test_x):
-        # alternative: delete this line and add sess as input argument (following line outside the function)
-        with tf.Session() as sess:
-            tf.get_variable_scope().reuse_variables()
-            self.saver.restore(sess, './model.ckpt')
-            output = sess.run(self.model(), feed_dict={self.x: test_x})
-            print(output)
 
 
 if __name__ == "__main__":
     print("Main function von models.py")
-    Single_LSTM_Model()
