@@ -214,30 +214,20 @@ class Single_LSTM_Model:
 class dynamic_Single_LSTM_Model:
     """Single LSTM Model."""
 
-    def __init__(self, epochs=8, n_classes=1, hidden_dim=200, n_features=36, sequence_length=4,
-                 batch_size=35, input_dim=9, num_cells=1):
+    def __init__(self, hparams):
         """Constructor."""
 
-        # specify hyperparameters
-        self.input_dim = input_dim  # dimension of each element of the sequence
-        self.sequence_length = sequence_length  # length of each sequence
-        self.hidden_dim = hidden_dim  # size of RNN hidden dimension = hidden state (both c and h)
-
-        self.epochs = epochs  # number of iterations to run the data set through the model
-        self.n_classes = n_classes  # number of classes (binary classification: 0 = not schedulable, 1 = schedulable)
-        self.n_features = n_features  # number of features in the dataset
-        self.batch_size = batch_size  # size of each batch of data that is feed into the model
-        self.learning_rate = 0.001  # learning rate
-        self.num_cells = num_cells  # number of LSTM cells
+        # save hyperparameters
+        self.hparams = hparams
 
         # define shapes of weights and biases manually
         # random value of shape [rnn_size, n_classes] and [n_classes]
         # automatically do this: https://www.tensorflow.org/api_docs/python/tf/contrib/layers/fully_connected
-        self.layer = {'weights': tf.Variable(tf.random_normal([self.hidden_dim, self.n_classes])),
-                      'bias': tf.Variable(tf.random_normal([self.n_classes]))}
+        self.layer = {'weights': tf.Variable(tf.random_normal([self.hparams.hidden_dim, self.hparams.num_classes])),
+                      'bias': tf.Variable(tf.random_normal([self.hparams.num_classes]))}
 
         # create placeholders for input data and labels
-        self.xplaceholder = tf.placeholder(tf.float32, [None, 4, 9])
+        self.xplaceholder = tf.placeholder(tf.float32, [None, self.hparams.time_steps, self.hparams.num_features])
         self.yplaceholder = tf.placeholder(tf.float32)
 
         # define the cost function:
@@ -250,7 +240,7 @@ class dynamic_Single_LSTM_Model:
         # pass cost to the optimizer:
         # AdamOptimizer because of fairly better performance
         self.optimizer = tf.train.AdamOptimizer(
-            learning_rate=self.learning_rate  # the learning rate
+            learning_rate=self.hparams.learning_rate  # the learning rate
         ).minimize(self.cost)
 
         # auxiliary ops
@@ -261,7 +251,7 @@ class dynamic_Single_LSTM_Model:
 
         # create LSTM cell
         lstm_cell = tf.nn.rnn_cell.LSTMCell(
-            num_units=self.hidden_dim,  # number of units in the LSTM cell
+            num_units=self.hparams.hidden_dim,  # number of units in the LSTM cell
             use_peepholes=False,  # enable/disable diagonal/peephole connections
             cell_clip=None,
             # cell state is clipped by this value prior to the cell output activation
@@ -332,7 +322,7 @@ class dynamic_Single_LSTM_Model:
             tf.local_variables_initializer().run()
 
             # loop over number of iterations (epochs)
-            for epoch in range(self.epochs):
+            for epoch in range(self.hparams.num_epochs):
                 # save start time
                 start_time = time.time()
 
@@ -343,10 +333,10 @@ class dynamic_Single_LSTM_Model:
                 i = 0
 
                 # Loop over number of batches
-                for step in range(int(len(X_train) / self.batch_size)):
+                for step in range(int(len(X_train) / self.hparams.batch_size)):
                     # keep track from where data was split in each iteration
                     start = i
-                    end = i + self.batch_size
+                    end = i + self.hparams.batch_size
 
                     # assign a batch of features and labels
                     batch_x = np.array(X_train[start:end])
@@ -363,13 +353,13 @@ class dynamic_Single_LSTM_Model:
                     epoch_loss += c
 
                     # raise iterator through data batches
-                    i += self.batch_size
+                    i += self.hparams.batch_size
 
                 # stop time
                 stop_time = time.time()
 
                 # print total loss of epoch
-                logger.info("Epoch %d completed out of %d, loss = %f", epoch, self.epochs,
+                logger.info("Epoch %d completed out of %d, loss = %f", epoch, self.hparams.num_epochs,
                             epoch_loss)
                 logger.info("Time elapsed: %f", stop_time - start_time)
 
@@ -406,11 +396,11 @@ class dynamic_Single_LSTM_Model:
             precision = precision_score(y_true=np.array(y_test), y_pred=pred)
 
             # print out all calculated scores
-            log_results("Single LSTM Model",
+            log_results("dynamic Single LSTM Model",
                         {"F1 Score": f1, "Accuracy Score": accuracy, "Recall": recall,
                          "Precision": precision})
 
 
 
 if __name__ == "__main__":
-    print("Main function von models.py")
+    print("Main function von LSTM_models.py")
