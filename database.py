@@ -71,63 +71,6 @@ class Database():
         else:  # database already closed
             logger.debug("No open database!")
 
-    def read_all_tasksets_2D(self):
-        """Read all task-sets from the database.
-
-        Return:
-            tasksets -- list with task-sets
-            labels -- list with the labels of the task-sets
-        """
-        # create logger
-        logger = logging.getLogger("RNN-SA.database.read_all_tasksets")
-
-        self.open_db()  # open database
-
-        # read all task-sets
-        self.db_cursor.execute("SELECT * FROM TaskSet")
-        rows = self.db_cursor.fetchall()
-
-        self.close_db()  # close database
-
-        if not rows:  # no task-set read
-            logger.debug("No task-set read!")
-            return None
-
-        # shuffle rows
-        shuffle(rows)
-
-        # limit number of rows
-        #rows = rows[:1000]
-
-        tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
-        labels = [x[1] for x in rows]  # list with corresponding labels
-
-        task_attributes_dict = self.read_task_attributes()  # get dictionary with task attributes
-
-        # replace task-ids with task attributes
-        for i, taskset in enumerate(tasksets):  # iterate over all task-sets
-            taskset = list(taskset)  # convert taskset-tuple to list
-
-            # TODO: remove all tasks with id = -1
-            # while taskset.count(-1) > 0:
-            #     taskset.remove(-1)
-
-            if taskset:  # at least one task is left
-                new_taskset = []    # create empty task-set
-
-                # replace Task_ID with task attributes
-                for j, task_id in enumerate(taskset):
-                    # append task attributes to taskset-array
-                    new_taskset.extend(task_attributes_dict[task_id])
-
-                # replace task-set in task-set list
-                tasksets[i] = np.asarray(new_taskset, np.float32)
-
-        tasksets_np = np.asarray(tasksets, np.float64)
-        labels_np = np.asarray(labels, np.int64)
-
-        return tasksets_np, labels_np
-
     def read_task_attributes(self):
         """Read the attributes of all tasks from the database.
 
@@ -177,7 +120,7 @@ class Database():
 
         return task_dict
 
-    def read_all_tasksets_3D(self):
+    def read_all_tasksets(self):
         """Read all task-sets from the database.
 
         Return:

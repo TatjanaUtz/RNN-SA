@@ -1,8 +1,8 @@
 default: &DEFAULT
   # TRAINING
-  num_epochs: 8 # number of iterations to rn the data set through the model
-  batch_size: 35  # size of each batch of data that is feed into the model
-  learning_rate: 1.0e-3 # learning rate
+  num_epochs: 50 # number of iterations to rn the data set through the model
+  batch_size: 32  # size of each batch of data that is feed into the model
+  learning_rate: 0.0001 # learning rate
   # DATA
   num_classes: 1  # number of classes (binary classification: 0 = not schedulable, 1 = schedulable)
   test_size: 0.2  # procentual number of test examples
@@ -11,4 +11,6 @@ default: &DEFAULT
 
 LSTM:
   <<: *DEFAULT
-  hidden_dim: 200 # size of RNN hidden dimension = hidden state (both c and h)
+  hidden_dim: 32 # size of RNN hidden dimension = hidden state (both c and h)
+  keep_prob: 1  # keep probability for dropout wrapper
+  num_cells: 1  # number of LSTM cells

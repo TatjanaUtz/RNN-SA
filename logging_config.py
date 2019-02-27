@@ -59,8 +59,8 @@ def log_results(name, res, hyperparams=None):
         logger.error("Invalid argument for 'results': %s but must be <class 'dict'>!",
                      type(res))
         return
-    if hyperparams is not None and not isinstance(hyperparams,
-                                                  dict):  # invalid argument for hyperparameters
+    if hyperparams is not None \
+            and not isinstance(hyperparams, dict):  # invalid argument for hyperparameters
         logger.error("Invalid argument for 'hyperparameters': is %s but must be <class 'dict'>!",
                      type(hyperparams))
         return
