@@ -9,7 +9,7 @@ from database import Database
 
 
 TRAIN_PERCENTAGE = 0.8  # how much data should be used for training (in %)
-TEST_PERCENTAGE = 0.1  # how much data should be used for testing (in %)
+TEST_PERCENTAGE = 0.2  # how much data should be used for testing (in %)
 
 
 class Dataset():
@@ -17,39 +17,39 @@ class Dataset():
     A dataset consists of task-sets and the corresponding labels.
     """
 
-    def __init__(self):
+    def __init__(self, hparams):
         """Constructor of class Dataset."""
         db = Database()
         input_data, labels, sequence_lengths = db.read_all_tasksets()
 
         # Split dataset for training, test and evaluation
         num_samples = len(input_data)  # lenght of dataset (number of samples)
-        num_train = int(TRAIN_PERCENTAGE * num_samples)  # number of samples for training
-        num_test = int(TEST_PERCENTAGE * num_samples)  # number of samples for testing
+        num_train = int(hparams.train_size * num_samples)  # number of samples for training
+        num_test = int(hparams.test_size * num_samples)  # number of samples for testing
 
         # dataset for training
         self.train = Datatype('train', input_data[:num_train],
                               labels[:num_train],
                               sequence_lengths[:num_train],
-                              num_train)
+                              num_train, hparams)
 
         # dataset for test
         self.test = Datatype('test', input_data[num_train:num_train + num_test],
                              labels[num_train:num_train + num_test],
                              sequence_lengths[num_train:num_train + num_test],
-                             num_test)
+                             num_test, hparams)
 
         # dataset for evaluation
         self.eval = Datatype('eval', input_data[num_train + num_test:],
                              labels[num_train + num_test:],
                              sequence_lengths[num_train + num_test:],
-                             num_samples - num_train - num_test)
+                             num_samples - num_train - num_test, hparams)
 
 
 class Datatype():
     """Representation of a specific dataset for training, test or evaluation."""
 
-    def __init__(self, name, input_data, labels, sequence_lengths, num_samples):
+    def __init__(self, name, input_data, labels, sequence_lengths, num_samples, hparams):
         """Constructor of class Datatype."""
         self.name = name  # name of the dataset
         self.input = input_data  # the input data
@@ -57,8 +57,9 @@ class Datatype():
         self.seqlen = sequence_lengths  # length of the sequences
         self.num_samples = num_samples  # the number of samples
         self.global_count = 0  # number of samples that have already been used
+        self.hparams = hparams
 
-    def next_batch(self, batch_size):
+    def next_batch(self):
         """Get next batch of a dataset.
 
         Args:
@@ -71,10 +72,9 @@ class Datatype():
         count = self.global_count
 
         # create next batches for input data and labels
-        sample_length = self.input.shape[1] * self.input.shape[2]
-        batch_x, new_count = self.make_batch(self.input, batch_size, sample_length, count)
-        batch_y, _ = self.make_batch(self.labels, batch_size, 1, count)
-        batch_seqlen, _ = self.make_batch(self.seqlen, batch_size, 1, count)
+        batch_x, new_count = self.make_batch(self.input, self.hparams.batch_size, count, [self.hparams.time_steps, self.hparams.element_size])
+        batch_y, _ = self.make_batch(self.labels, self.hparams.batch_size, count, [None, 1])
+        batch_seqlen, _ = self.make_batch(self.seqlen, self.hparams.batch_size, count)
 
         # raise count of dataset
         self.global_count = new_count % self.num_samples
@@ -83,7 +83,7 @@ class Datatype():
         return batch_x, batch_y, batch_seqlen
 
     @staticmethod
-    def make_batch(data, batch_size, sample_length, count):
+    def make_batch(data, batch_size, count, input_dim=None):
         """Create a batch.
 
         Args:
@@ -100,10 +100,15 @@ class Datatype():
 
         # if available data is less than batch_size, fill with zeros
         while len(batch) < batch_size:
-            zeroes_np = np.asarray([[0] * sample_length])
+            if input_dim is None:   # sequence length batch
+                zeroes_np = np.asarray([0])
+            elif input_dim[0] is None:  # label batch
+                zeroes_np = np.asarray([[0] * input_dim[1]])
+            else:   # input data batch
+                zeroes_np = np.asarray([[[0] * input_dim[1]] * input_dim[0]])
+
             batch = np.append(batch, zeroes_np, axis=0)
             count = 0
-
 
         # return created batch and new count
         return batch, count
