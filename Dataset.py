@@ -4,6 +4,9 @@ A dataset consists of many samples, that each hold a sequence of attributes.
 All samples are divided into sub-datasets for training, test and evaluation.
 """
 import numpy as np
+from sklearn.model_selection import train_test_split
+from database import Database
+
 
 TRAIN_PERCENTAGE = 0.8  # how much data should be used for training (in %)
 TEST_PERCENTAGE = 0.1  # how much data should be used for testing (in %)
@@ -14,15 +17,10 @@ class Dataset():
     A dataset consists of task-sets and the corresponding labels.
     """
 
-    def __init__(self, input_data, labels):
-        """Constructor of class Dataset.
-
-        Args:
-            input_data -- array with input data
-            labels -- array with labels
-        """
-        self.input_data = input_data
-        self.labels = labels
+    def __init__(self):
+        """Constructor of class Dataset."""
+        db = Database()
+        input_data, labels, sequence_lengths = db.read_all_tasksets()
 
         # Split dataset for training, test and evaluation
         num_samples = len(input_data)  # lenght of dataset (number of samples)
@@ -30,25 +28,33 @@ class Dataset():
         num_test = int(TEST_PERCENTAGE * num_samples)  # number of samples for testing
 
         # dataset for training
-        self.train = Datatype('train', input_data[:num_train], labels[:num_train], num_train)
+        self.train = Datatype('train', input_data[:num_train],
+                              labels[:num_train],
+                              sequence_lengths[:num_train],
+                              num_train)
 
         # dataset for test
         self.test = Datatype('test', input_data[num_train:num_train + num_test],
-                             labels[num_train:num_train + num_test], num_test)
+                             labels[num_train:num_train + num_test],
+                             sequence_lengths[num_train:num_train + num_test],
+                             num_test)
 
         # dataset for evaluation
         self.eval = Datatype('eval', input_data[num_train + num_test:],
-                             labels[num_train + num_test:], num_samples - num_train - num_test)
+                             labels[num_train + num_test:],
+                             sequence_lengths[num_train + num_test:],
+                             num_samples - num_train - num_test)
 
 
 class Datatype():
     """Representation of a specific dataset for training, test or evaluation."""
 
-    def __init__(self, name, input_data, labels, num_samples):
+    def __init__(self, name, input_data, labels, sequence_lengths, num_samples):
         """Constructor of class Datatype."""
         self.name = name  # name of the dataset
         self.input = input_data  # the input data
         self.labels = labels  # the labels
+        self.seqlen = sequence_lengths  # length of the sequences
         self.num_samples = num_samples  # the number of samples
         self.global_count = 0  # number of samples that have already been used
 
@@ -56,7 +62,6 @@ class Datatype():
         """Get next batch of a dataset.
 
         Args:
-            data_type -- dataset (train, test or eval) for which the next batch should be created
             batch_size -- size of the batch
         Return:
             input_data -- batch of input data
@@ -66,15 +71,16 @@ class Datatype():
         count = self.global_count
 
         # create next batches for input data and labels
-        # TODO: replace sample_length with constant
-        input_data, new_count = self.make_batch(self.input, batch_size, 36, count)
-        labels, _ = self.make_batch(self.labels, batch_size, 1, count)
+        sample_length = self.input.shape[1] * self.input.shape[2]
+        batch_x, new_count = self.make_batch(self.input, batch_size, sample_length, count)
+        batch_y, _ = self.make_batch(self.labels, batch_size, 1, count)
+        batch_seqlen, _ = self.make_batch(self.seqlen, batch_size, 1, count)
 
         # raise count of dataset
         self.global_count = new_count % self.num_samples
 
         # return input data and labels
-        return input_data, labels
+        return batch_x, batch_y, batch_seqlen
 
     @staticmethod
     def make_batch(data, batch_size, sample_length, count):
@@ -93,12 +99,6 @@ class Datatype():
         count += batch_size  # raise count
 
         # if available data is less than batch_size, fill with zeros
-        # TODO: uncomment this block if lists are used
-        # while len(batch) < batch_size:
-        #     batch.append(np.zeros(sample_length, dtype=int))
-        #     count = 0  # reset count (all data has been used)
-
-        # TODO: delete this block if lists are used
         while len(batch) < batch_size:
             zeroes_np = np.asarray([[0] * sample_length])
             batch = np.append(batch, zeroes_np, axis=0)
