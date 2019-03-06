@@ -146,12 +146,14 @@ class Database():
         shuffle(rows)
 
         # limit number of rows
-        #rows = rows[:1000]
+        # rows = rows[:1000]
 
         tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
         labels = [x[1] for x in rows]  # list with corresponding labels
 
         task_attributes_dict = self.read_task_attributes()  # get dictionary with task attributes
+
+        seqlen_list = []
 
         # replace task-ids with task attributes
         for i, taskset in enumerate(tasksets):  # iterate over all task-sets
@@ -162,15 +164,22 @@ class Database():
             #     taskset.remove(-1)
 
             if taskset:  # at least one task is left
+                task_counter = 0  # number of tasks in task-set
+
                 # replace Task_ID with task attributes
                 for j, task_id in enumerate(taskset):
                     taskset[j] = np.asarray(task_attributes_dict[task_id])
+                    task_counter += 1
 
                 # replace task-set in task-set list
                 tasksets[i] = np.asarray(taskset)
 
+                # add sequence lenght to list
+                seqlen_list.append(task_counter)
+
         tasksets_np = np.asarray(tasksets, np.float32)
         labels_np = np.asarray(labels, np.int32)
+        labels_reshaped = np.reshape(labels_np, (len(labels_np), 1))
+        seqlen_list_np = np.asarray(seqlen_list, np.int32)
 
-        return tasksets_np, labels_np
-
+        return tasksets_np, labels_reshaped, seqlen_list_np
