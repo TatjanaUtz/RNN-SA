@@ -16,6 +16,13 @@ from database_interface import Database
 from logging_config import init_logging
 
 
+def main():
+    """Main function of module database_filter."""
+    init_logging()  # Initialize and start logging
+    my_database = Database()  # create connection to the database
+    filter_database(my_database)  # filter the database
+
+
 def filter_database(database):
     """Filters a database.
 
@@ -38,7 +45,7 @@ def filter_database(database):
     task_attributes = database.read_table_task()
 
     # get the execution times from the database
-    execution_times = database.read_execution_times()
+    execution_times = database.read_table_executiontimes()
 
     # add execution time to every task
     task_attributes = _add_execution_time(task_attributes, execution_times)
@@ -91,9 +98,6 @@ def _add_execution_time(task_attributes, execution_times):
     Return:
         task_attributes -- dictionary with task attributes including the execution time
     """
-    # create logger
-    logger = logging.getLogger('RNN-SA.database_filter._add_execution_time')
-
     # iterate over all tasks
     for task_id in task_attributes:
 
@@ -143,9 +147,9 @@ def simulate(taskset):
 
     # Get the periods of the tasks
     periods = []
-    for i in range(len(taskset)):
-        if taskset[i][9] not in periods:
-            periods.append(taskset[i][9])
+    for i, task in enumerate(taskset):
+        if task[9] not in periods:
+            periods.append(task[9])
 
     # Calculate the hyperperiod of the tasks
     hyper_period = _lcm(periods)
@@ -157,13 +161,13 @@ def simulate(taskset):
     configuration.task_data_fields['priority'] = 'int'  # 'priority' is of type int
 
     # Add the tasks to the list of tasks
-    for i in range(len(taskset)):
+    for i, task in enumerate(taskset):
         task_name = "T" + str(i)
-        activation_dates = _get_activation_dates(hyper_period, taskset[i][9], taskset[i][10])
+        activation_dates = _get_activation_dates(hyper_period, task[9], task[10])
         configuration.add_task(name=task_name, identifier=i, task_type="Sporadic",
-                               period=taskset[i][9], activation_date=0, wcet=taskset[i][-1],
-                               deadline=taskset[i][8], list_activation_dates=activation_dates,
-                               data={'priority': taskset[i][0]})
+                               period=task[9], activation_date=0, wcet=task[-1],
+                               deadline=task[8], list_activation_dates=activation_dates,
+                               data={'priority': task[0]})
 
     # Add a processor to the list of processors
     configuration.add_processor(name="CPU1", identifier=1)
@@ -253,6 +257,4 @@ def _gcd(*numbers):
 
 
 if __name__ == "__main__":
-    init_logging()
-    my_db = Database()
-    filter_database(my_db)
+    main()
