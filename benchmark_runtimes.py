@@ -5,7 +5,7 @@ execution times are calculated and saved to the database.
 """
 import logging
 
-from database import Database
+from database_interface import Database
 
 
 def benchmark_runtimes():

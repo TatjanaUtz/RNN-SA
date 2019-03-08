@@ -5,7 +5,7 @@ All samples are divided into sub-datasets for training, test and evaluation.
 """
 import numpy as np
 from sklearn.model_selection import train_test_split
-from database import Database
+from database_interface import Database
 
 
 TRAIN_PERCENTAGE = 0.8  # how much data should be used for training (in %)
@@ -20,7 +20,7 @@ class Dataset():
     def __init__(self, hparams):
         """Constructor of class Dataset."""
         db = Database()
-        input_data, labels, sequence_lengths = db.read_all_tasksets()
+        input_data, labels, sequence_lengths = db.read_all_tasksets_preprocessed()
 
         # Split dataset for training, test and evaluation
         num_samples = len(input_data)  # lenght of dataset (number of samples)

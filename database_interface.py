@@ -12,12 +12,14 @@ from random import shuffle  # for shuffle of the task-sets
 import numpy as np  # for arrays
 
 TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
+NUM_TASK_ATTRIBUTES = 6
 TASK_PKG_DICT = {
     'cond_mod': [1, 0, 0, 0],
     'hey': [0, 1, 0, 0],
     'pi': [0, 0, 1, 0],
     'tumatmul': [0, 0, 0, 1]
 }
+NUM_TASK_PKGS = 4
 
 
 class Database():
@@ -71,7 +73,7 @@ class Database():
         else:  # database already closed
             logger.debug("No open database!")
 
-    def read_task_attributes(self):
+    def read_task_attributes_preprocessed(self):
         """Read the attributes of all tasks from the database.
 
         The attributes are saved in the table 'Task' in the database.
@@ -106,8 +108,8 @@ class Database():
 
         task_dict = dict()  # create empty dictionary
 
-        # TODO: delete task with id = -1
-        task_dict[-1] = [0] * 9
+        # create task with id = -1
+        task_dict[-1] = [0] * (NUM_TASK_ATTRIBUTES - 1 + NUM_TASK_PKGS)
 
         for row in rows:  # iterate over all tasks
             row = list(row)  # convert tuple to list
@@ -120,7 +122,50 @@ class Database():
 
         return task_dict
 
-    def read_all_tasksets(self):
+    def read_task_attributes(self):
+        """Read the attributes of all tasks from the database.
+
+        The attributes are saved in the table 'Task' in the database.
+        Currently the following attributes are considered (defined in TASK_ATTRIBUTES):
+            Task_ID -- id of the task
+            Priority -- priority of the task
+            PKG -- PKG of the task
+            Arg -- argument of the task
+            CRITICALTIME -- deadline of the task
+            Period -- period of the task
+            Number_of_Jobs -- number of jobs of the task
+
+        Return:
+            task_dict -- dictionary with all tasks and their attributes
+                         (key = Task_ID, value = list of attributes)
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_task_attributes")
+
+        self.open_db()  # open database
+
+        # read all tasks
+        self.db_cursor.execute("SELECT {} FROM Task".format(TASK_ATTRIBUTES))
+        rows = self.db_cursor.fetchall()
+
+        self.close_db()  # close database
+
+        if not rows:  # no task read
+            logger.debug("No task read!")
+            return None
+
+        task_dict = dict()  # create empty dictionary
+
+        # create task with id = -1
+        task_dict[-1] = np.asarray([0] * NUM_TASK_ATTRIBUTES)
+
+        for row in rows:  # iterate over all tasks
+            row = list(row)  # convert tuple to list
+            task_dict[row[0]] = np.asarray(row[1:])  # add task to dictionary
+
+        return task_dict
+
+    def read_all_tasksets_preprocessed(self):
         """Read all task-sets from the database.
 
         Return:
@@ -146,12 +191,12 @@ class Database():
         shuffle(rows)
 
         # limit number of rows
-        # rows = rows[:1000]
+        # rows = rows[:5]
 
         tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
         labels = [x[1] for x in rows]  # list with corresponding labels
 
-        task_attributes_dict = self.read_task_attributes()  # get dictionary with task attributes
+        task_attributes_dict = self.read_task_attributes_preprocessed()  # get dictionary with task attributes
 
         seqlen_list = []
 
@@ -183,3 +228,65 @@ class Database():
         seqlen_list_np = np.asarray(seqlen_list, np.int32)
 
         return tasksets_np, labels_reshaped, seqlen_list_np
+
+    def read_all_tasksets(self):
+        """Read all task-sets from the database.
+
+        Return:
+            tasksets_np -- numpy array of task-sets
+            labels_np -- numpy array of the labels of the task-sets
+            seqlens_np -- numpy array of the sequence lenghts (= number of tasks) of the task-sets
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_all_tasksets")
+
+        self.open_db()  # open database
+
+        # read all task-sets
+        self.db_cursor.execute("SELECT * FROM TaskSet")
+        rows = self.db_cursor.fetchall()
+
+        self.close_db()  # close database
+
+        if not rows:  # no task-set read
+            logger.debug("No task-set read!")
+            return None
+
+        # shuffle rows
+        shuffle(rows)
+
+        # limit number of rows
+        # rows = rows[:5]
+
+        tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
+        labels = [x[1] for x in rows]  # list with corresponding labels
+
+        task_attributes_dict = self.read_task_attributes()  # get dictionary with task attributes
+
+        seqlens = []
+
+        # replace task-ids with task attributes
+        for i, taskset in enumerate(tasksets):  # iterate over all task-sets
+            taskset = list(taskset)  # convert taskset-tuple to list
+
+            if taskset:  # at least one task is left
+                task_counter = 0  # number of tasks in task-set
+
+                # replace Task_ID with task attributes
+                for j, task_id in enumerate(taskset):
+                    taskset[j] = np.asarray(task_attributes_dict[task_id])
+                    if task_id is not -1:
+                        task_counter += 1
+
+                # replace task-set in task-set list
+                tasksets[i] = np.asarray(taskset)
+
+                # add sequence lenght to list
+                seqlens.append(task_counter)
+
+        tasksets_np = np.asarray(tasksets)
+        labels_np = np.asarray(labels, np.int32)
+        labels_np = np.reshape(labels_np, (len(labels), 1))
+        seqlens_np = np.asarray(seqlens, np.int32)
+
+        return tasksets_np, labels_np, seqlens_np

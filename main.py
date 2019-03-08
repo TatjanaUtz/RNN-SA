@@ -9,7 +9,7 @@ import logging_config
 import LSTM_models
 from dataset import Dataset
 from util import YParams
-from database import Database
+from database_interface import Database
 
 
 def main():
@@ -19,7 +19,6 @@ def main():
 
     # get hyperparameters
     hparams = YParams('hparams.yaml', 'LSTM')
-
 
     # get the dataset from the database
     my_dataset = Dataset(hparams=hparams)
