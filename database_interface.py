@@ -329,7 +329,7 @@ class Database():
 
         return tasksets_np, labels_np, seqlens_np
 
-    def read_execution_times(self):
+    def read_table_executiontimes(self):
         """Read table ExecutionTimes.
 
         Read all rows of the table ExecutionTimes and save the columns PKG(Arg) and Average_C as
