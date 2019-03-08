@@ -65,24 +65,21 @@ def filter_database(database):
 
         # compare simulation result with real result
         if schedulability is True and labels[i] == 1:  # true positive
-            # Save task-set to correct table
+            # Write correct task-set to database
             database.write_correct_taskset(taskset_ids[i], taskset, labels[i])
 
         elif schedulability is True and labels[i] == 0:  # false positive
-            # save task-set to incorrect table
-            logger.debug("Taskset %d - False positive", taskset_ids[i])
+            pass
 
         elif schedulability is False and labels[i] == 1:  # false negative
-            # save task-set to incorrect table
-            logger.debug("Taskset %d - False negative", taskset_ids[i])
+            pass
 
         elif schedulability is False and labels[i] == 0:  # true negative
-            # save task-set to correct table
-            logger.debug("Taskset %d - True negative", taskset_ids[i])
+            # write correct task-set to database
             database.write_correct_taskset(taskset_ids[i], taskset, labels[i])
 
         else:  # no valid combination
-            logger.debug("Taskset %d - No valid combination!", taskset_ids[i])
+            logger.error("Taskset %d - No valid combination!", taskset_ids[i])
 
     # log duration
     logger.info("Time elapsed for filtering: %f", time.time() - start_time)
@@ -139,9 +136,6 @@ def simulate(taskset):
         True -- the task-set is schedulable
         False -- the task-set is not schedulable
     """
-    # create logger
-    logger = logging.getLogger('RNN-SA.database_filter.simulate')
-
     # manual configuration: the configuration class stores all the details about a system
     configuration = Configuration()
 
@@ -188,7 +182,6 @@ def simulate(taskset):
     for task in model.results.tasks:
         for job in task.jobs:
             if job.aborted:  # deadline miss
-                logger.debug("%s Deadline miss!", job.name)
                 return False
 
     return True
