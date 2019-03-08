@@ -21,6 +21,44 @@ TASK_PKG_DICT = {
 }
 NUM_TASK_PKGS = 4
 
+# default task execution times
+EXECUTION_TIME_DICT = {
+    ("hey", 0): 1045,
+    ("hey", 1000): 1094,
+    ("hey", 1000000): 1071,
+
+    ("pi", 100): 1574,
+    ("pi", 10000): 1693,
+    ("pi", 100000): 1870,
+
+    ("cond_42", 41): 1350,
+    ("cond_42", 42): 1376,
+    ("cond_42", 10041): 1413,
+    ("cond_42", 10042): 1432,
+    ("cond_42", 1000041): 1368,
+    ("cond_42", 1000042): 1396,
+
+    ("cond_mod", 100): 1323,
+    ("cond_mod", 103): 1351,
+    ("cond_mod", 10000): 1395,
+    ("cond_mod", 10003): 1391,
+    ("cond_mod", 1000000): 1342,
+    ("cond_mod", 1000003): 1391,
+
+    ("tumatmul", 10): 1511,
+    ("tumatmul", 11): 1543,
+    ("tumatmul", 10000): 1692,
+    ("tumatmul", 10001): 1662,
+    ("tumatmul", 1000000): 3009,
+    ("tumatmul", 1000001): 3121,
+
+    "hey": 1070,
+    "pi": 1712,
+    "cond_42": 1389,
+    "cond_mod": 1366,
+    "tumatmul": 2090
+}
+
 
 class Database():
     """Class representing a database.
@@ -290,3 +328,168 @@ class Database():
         seqlens_np = np.asarray(seqlens, np.int32)
 
         return tasksets_np, labels_np, seqlens_np
+
+    def read_execution_times(self):
+        """Read table ExecutionTimes.
+
+        Read all rows of the table ExecutionTimes and save the columns PKG(Arg) and Average_C as
+        a dictionary with
+            key = PKG(Arg)
+            value = Average_C.
+
+        Return:
+            execution_times -- dictionary with execution times
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_execution_times")
+
+        self.open_db()  # open database
+        # read all average execution times
+        self.db_cursor.execute("SELECT [PKG(Arg)], [Average_C] FROM ExecutionTimes")
+        rows = self.db_cursor.fetchall()
+        self.close_db()  # close database
+
+        # check if execution times where found
+        if not rows:  # now row was read
+            logger.error("Table ExecutionTimes does not exist or is empty!")
+
+        # create dictionary with default execution times
+        execution_times = EXECUTION_TIME_DICT
+
+        # update execution time dictionary
+        for row in rows:  # iterate over all rows
+            # get data from row
+            pkg_arg = row[0]
+            average_c = row[1]
+
+            # split pkg and arg and create dictionary entry
+            if '(' in pkg_arg:  # string contains pkg and arg
+                pkg, arg = pkg_arg.split('(')
+                arg = int(arg[:-1])  # delete last character = ')' and format to int
+                dict_entry = {(pkg, arg): average_c}
+            else:  # string contains only pkg, no arg
+                pkg = pkg_arg
+                dict_entry = {pkg: average_c}
+
+            # update dictionary
+            execution_times.update(dict_entry)
+
+        return execution_times
+
+    def read_table_taskset(self):
+        """Read the table TaskSet.
+
+        Read all rows of table TaskSet and split the table in labels and a task-set containing the
+        task IDs.
+
+        Return:
+            tasksets -- list of task-sets containing the task IDs
+            labels -- the labels, i.e. the schedulability of the task-sets
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.read_table_taskset')
+
+        self.open_db()  # open database
+        # read all task-sets
+        self.db_cursor.execute("SELECT * FROM TaskSet")
+        rows = self.db_cursor.fetchall()
+        self.close_db()  # close database
+
+        if not rows:  # no task-set read
+            logger.debug("No task-set read!")
+            return None
+
+        # limit number of rows
+        # rows = rows[:10]
+
+        # split taskset IDs, task-sets and labels
+        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
+        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
+        labels = [x[1] for x in rows]  # list with corresponding labels
+
+        return taskset_ids, tasksets, labels
+
+    def read_table_task(self):
+        """Read the table Task.
+
+        Read all rows and columns from the table Task and save the task attributes as a dictionary
+        with    key = Task_ID
+                value = (Priority, Deadline, Quota, CAPS, PKG, Arg, CORES, COREOFFSET, CRITICALTIME,
+                         Period, Number_of_Jobs, OFFSET).
+
+        Return:
+            task_attributes -- dictionary with the task attributes
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_table_task")
+
+        self.open_db()  # open database
+        # read all tasks
+        self.db_cursor.execute("SELECT * FROM Task")
+        rows = self.db_cursor.fetchall()
+        self.close_db()  # close database
+
+        if not rows:  # no task read
+            logger.debug("No task read!")
+            return None
+
+        task_attributes = dict()  # create empty dictionary
+
+        for row in rows:  # iterate over all tasks
+            task_attributes[row[0]] = row[1:]  # add task to dictionary
+
+        return task_attributes
+
+    def write_correct_taskset(self, taskset_id, taskset, label):
+        """Write a task-set to the table CorrectTaskSet.
+
+        Args:
+            taskset_id -- ID of the task-set
+            taskset -- list containing the task IDs
+            label -- label of the task-set = schedulabiltiy of task-set
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.write_correct_taskset')
+
+        self.open_db()  # open database
+
+        # create table CorrectTaskSet if it does not exist
+
+        create_table_sql = "CREATE TABLE IF NOT EXISTS CorrectTaskSet (" \
+                           "Set_ID INTEGER, " \
+                           "Successful INT, " \
+                           "TASK1_ID INTEGER, " \
+                           "TASK2_ID INTEGER, " \
+                           "TASK3_ID INTEGER, " \
+                           "TASK4_ID INTEGER, " \
+                           "PRIMARY KEY(Set_ID)" \
+                           ");"
+        try:
+            self.db_cursor.execute(create_table_sql)
+        except sqlite3.Error as sqle:
+            logger.error(sqle)
+
+        # sql statement for inserting or replacing a row in the CorrectTaskSet table
+        insert_or_replace_sql = "INSERT OR REPLACE INTO CorrectTaskSet" \
+                                "(Set_ID, Successful, TASK1_ID, TASK2_ID, TASK3_ID, TASK4_ID)" \
+                                " VALUES(?, ?, ?, ?, ?, ?)"
+
+        # insert or replace task-set
+        self.db_cursor.execute(insert_or_replace_sql, (taskset_id, label, taskset[0], taskset[1],
+                                                       taskset[2], taskset[3]))
+
+        # save (commit) changes
+        self.db_connection.commit()
+
+        self.close_db()  # close database
+
+
+
+
+
+
+
+
+
+
+
