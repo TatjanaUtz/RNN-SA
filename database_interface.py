@@ -4,12 +4,14 @@ This module provides classes and methods for importing task-sets from the SQLite
 and formatting data into a format usable with tensorflow.
 """
 
-import logging  # for logging
+import logging
 import os  # for current directory dir
 import sqlite3  # for working with the database
 from random import shuffle  # for shuffle of the task-sets
 
 import numpy as np  # for arrays
+
+from logging_config import init_logging
 
 TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
 NUM_TASK_ATTRIBUTES = 6
@@ -229,7 +231,7 @@ class Database():
         shuffle(rows)
 
         # limit number of rows
-        # rows = rows[:5]
+        rows = rows[:5]
 
         tasksets = [x[2:] for x in rows]  # list with all task-sets consisting of task-ids
         labels = [x[1] for x in rows]  # list with corresponding labels
@@ -484,12 +486,94 @@ class Database():
         self.close_db()  # close database
 
 
+class _Dataset():
+    """Representation of a dataset.
+
+    This class represents a dataset, e.g. a dataset for training, evaluation or testing.
+    It consists of input data and labels. The input data is of shape
+    [num_samples X sequence_length X num_features]. The labels are of shape [num_samples, 1].
+    """
+
+    def __init__(self, input_data, labels):
+        """Constructor.
+
+        This function initializes a _Dataset.
+        """
+        self.input_data = input_data  # the input data
+        self.labels = labels  # the labels
+        self.global_count = 0  # number of samples that have already been used for batch creation
+
+    def next_batch(self, batch_size):
+        """Create the next batch of data.
+
+        This function creates the next batch of the dataset.
+
+        Return:
+            batch_x -- next batch of input data
+            batch_y -- next batch of labels
+        """
+        # get current count of dataset
+        count = self.global_count
+
+        # create next batch for input data and labels
+        batch_x, new_count = self.make_batch(self.input_data, batch_size, count)
+        batch_y, _ = self.make_batch(self.labels, batch_size, count)
+
+        # raise global count of the dataset (% to reset counter to 0 if dataset size is reached)
+        self.global_count = new_count % len(self.input_data)
+
+        # return created batches
+        return batch_x, batch_y
+
+    @staticmethod
+    def make_batch(data, batch_size, count):
+        """Create a batch of data.
+
+        This function creates a batch of data of the size batch_size.
+
+        Args:
+            data -- a data array
+            batch_size -- the size of the batch
+            count -- current count of used data samples
+        Return:
+            batch -- a batch of data
+            count -- new count of the data array
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.make_batch')
+
+        # create a batch of data starting at count and size of batch_size
+        batch = data[count:count + batch_size]
+
+        # raise count
+        count += batch_size
+
+        # if available data is less then batch_size: fill with zeros
+        # create array with zeros according to data array shape
+        if len(data.shape) == 1:  # vector
+            zeroes = np.asarray([0])
+        elif len(data.shape) == 2:  # 2D array
+            zeroes = np.asarray([[0] * data.shape[1]])
+        elif len(data.shape) == 3:  # 3D array
+            zeroes = np.asarray([[[0] * data.shape[1]] * data.shape[0]])
+        else:  # other dimension
+            logger.error("Other dimension of data array!")
+
+        # append zeros to batch while length is less than batch_size
+        while len(batch) < batch_size:
+            batch = np.append(batch, zeroes, axis=0)
+
+            # Reset count
+            count = 0
+
+        # return created batch and new count
+        return batch, count
 
 
+if __name__ == "__main__":
+    # initialize logging
+    init_logging()
 
-
-
-
-
-
-
+    my_db = Database()
+    tasksets, labels, _ = my_db.read_all_tasksets()
+    my_dataset = _Dataset(tasksets, labels)
