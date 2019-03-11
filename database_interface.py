@@ -10,17 +10,27 @@ import sqlite3  # for working with the database
 from random import shuffle  # for shuffle of the task-sets
 
 import numpy as np  # for arrays
+from sklearn.model_selection import train_test_split
 
 from logging_config import init_logging
 
-TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
-NUM_TASK_ATTRIBUTES = 6
+# task attributes that should be used for classifying task-sets
+USE_FEATURES = ['Priority', 'PKG', 'Arg', 'CRITICALTIME', 'Period', 'Number_of_Jobs']
+
+# one hot encoding of attribute PKG of a task
 TASK_PKG_DICT = {
     'cond_mod': [1, 0, 0, 0],
     'hey': [0, 1, 0, 0],
     'pi': [0, 0, 1, 0],
     'tumatmul': [0, 0, 0, 1]
 }
+
+# default indices of all task attributes (column indices of 'Task' without Task_ID)
+DEFAULT_FEATURES = ['Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES', 'COREOFFSET',
+                    'CRITICALTIME', 'Period', 'Number_of_Jobs', 'OFFSET']
+
+TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
+NUM_TASK_ATTRIBUTES = 6
 NUM_TASK_PKGS = 4
 
 # default task execution times
@@ -79,7 +89,7 @@ class Database():
         self.db_connection = None  # connection to the database
         self.db_cursor = None  # cursor to work with the database
 
-    def open_db(self):
+    def _open_db(self):
         """Open a database.
 
         This method opens the database by creating a connection and a cursor.
@@ -96,7 +106,7 @@ class Database():
         else:  # database does not exist
             logger.error("Database %s not found!", self.db_name)
 
-    def close_db(self):
+    def _close_db(self):
         """Closes a database.
 
         This method closes the database if a connection or cursor is saved. Prior to that the
@@ -134,13 +144,13 @@ class Database():
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_task_attributes")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
 
         # read all tasks
         self.db_cursor.execute("SELECT {} FROM Task".format(TASK_ATTRIBUTES))
         rows = self.db_cursor.fetchall()
 
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task read
             logger.debug("No task read!")
@@ -182,13 +192,13 @@ class Database():
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_task_attributes")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
 
         # read all tasks
         self.db_cursor.execute("SELECT {} FROM Task".format(TASK_ATTRIBUTES))
         rows = self.db_cursor.fetchall()
 
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task read
             logger.debug("No task read!")
@@ -215,13 +225,13 @@ class Database():
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_all_tasksets")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
 
         # read all task-sets
         self.db_cursor.execute("SELECT * FROM TaskSet")
         rows = self.db_cursor.fetchall()
 
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task-set read
             logger.debug("No task-set read!")
@@ -280,13 +290,13 @@ class Database():
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_all_tasksets")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
 
         # read all task-sets
         self.db_cursor.execute("SELECT * FROM TaskSet")
         rows = self.db_cursor.fetchall()
 
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task-set read
             logger.debug("No task-set read!")
@@ -331,6 +341,41 @@ class Database():
 
         return tasksets_np, labels_np, seqlens_np
 
+    def read_table_correcttaskset(self):
+        """Read the table CorrectTaskSet.
+
+        Read all rows of table CorrectTaskSet and split the table in labels and a task-set containing the
+        task IDs.
+
+        Return:
+            taskset_ids -- list of IDs of the task-sets
+            tasksets -- list of task-sets containing the task IDs
+            labels -- the labels, i.e. the schedulability of the task-sets
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.read_table_correcttaskset')
+
+        self._open_db()  # open database
+        # read all task-sets
+        self.db_cursor.execute("SELECT * FROM CorrectTaskSet")
+        rows = self.db_cursor.fetchall()
+        self._close_db()  # close database
+
+        if not rows:  # no task-set read
+            logger.debug("No task-set read!")
+            return None
+
+        # limit number of rows
+        # rows = rows[:10]
+
+        # split taskset IDs, task-sets and labels
+        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
+        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
+        labels = [x[1] for x in rows]  # list with corresponding labels
+
+        return taskset_ids, tasksets, labels
+
+
     def read_table_executiontimes(self):
         """Read table ExecutionTimes.
 
@@ -345,11 +390,11 @@ class Database():
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_execution_times")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
         # read all average execution times
         self.db_cursor.execute("SELECT [PKG(Arg)], [Average_C] FROM ExecutionTimes")
         rows = self.db_cursor.fetchall()
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         # check if execution times where found
         if not rows:  # now row was read
@@ -391,11 +436,11 @@ class Database():
         # create logger
         logger = logging.getLogger('RNN-SA.database_interface.read_table_taskset')
 
-        self.open_db()  # open database
+        self._open_db()  # open database
         # read all task-sets
         self.db_cursor.execute("SELECT * FROM TaskSet")
         rows = self.db_cursor.fetchall()
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task-set read
             logger.debug("No task-set read!")
@@ -411,7 +456,7 @@ class Database():
 
         return taskset_ids, tasksets, labels
 
-    def read_table_task(self):
+    def read_table_task(self, preprocessing=False):
         """Read the table Task.
 
         Read all rows and columns from the table Task and save the task attributes as a dictionary
@@ -419,17 +464,19 @@ class Database():
                 value = (Priority, Deadline, Quota, CAPS, PKG, Arg, CORES, COREOFFSET, CRITICALTIME,
                          Period, Number_of_Jobs, OFFSET).
 
+        Args:
+            preprocessing -- boolean, wether preprocessing should be done or not, default: False
         Return:
             task_attributes -- dictionary with the task attributes
         """
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_table_task")
 
-        self.open_db()  # open database
+        self._open_db()  # open database
         # read all tasks
         self.db_cursor.execute("SELECT * FROM Task")
         rows = self.db_cursor.fetchall()
-        self.close_db()  # close database
+        self._close_db()  # close database
 
         if not rows:  # no task read
             logger.debug("No task read!")
@@ -439,6 +486,10 @@ class Database():
 
         for row in rows:  # iterate over all tasks
             task_attributes[row[0]] = row[1:]  # add task to dictionary
+
+        # do data preprocessing
+        if preprocessing:
+            task_attributes = self._preprocess_data(task_attributes)
 
         return task_attributes
 
@@ -453,7 +504,7 @@ class Database():
         # create logger
         logger = logging.getLogger('RNN-SA.database_interface.write_correct_taskset')
 
-        self.open_db()  # open database
+        self._open_db()  # open database
 
         # create table CorrectTaskSet if it does not exist
 
@@ -483,7 +534,88 @@ class Database():
         # save (commit) changes
         self.db_connection.commit()
 
-        self.close_db()  # close database
+        self._close_db()  # close database
+
+    def load_data(self):
+        """Load the data from the database.
+
+        Return:
+            train_X -- array with task-sets for training
+            train_y -- vector with labels for training
+            test_X -- array with task-sets for test
+            test_y -- vector with labels for test
+        """
+        # read table 'CorrectTaskSet'
+        _, tasksets, labels = self.read_table_correcttaskset()
+
+        # shuffle tasksets and labels in unisono
+        data = list(zip(tasksets, labels))
+        shuffle(data)
+        tasksets, labels = zip(*data)
+
+        # convert tuple to list
+        tasksets = list(tasksets)
+
+        # read table 'Task'
+        task_attributes = self.read_table_task(preprocessing=True)
+
+        # replace task IDs with the corresponding task attributes
+        for i, taskset in enumerate(tasksets):  # iterate over all samples
+            # convert tuple to list
+            taskset = list(taskset)
+
+            # delete all tasks with Task_ID = -1
+            while taskset.count(-1) > 0:
+                taskset.remove(-1)
+
+            # replace Task_ID with task attributes
+            for j, task_id in enumerate(taskset):  # iterate over all task IDs
+                taskset[j] = task_attributes[task_id]
+
+            # replace taskset in tasksets
+            tasksets[i] = taskset
+
+        # convert lists to numpy arrays
+        tasksets_np = np.asarray(tasksets)
+        labels_np = np.asarray(labels, np.int32)
+
+        # split data into training and test
+        train_X, test_X, train_y, test_y = train_test_split(tasksets_np, labels_np)
+
+        # return task-sets and labels
+        return train_X, train_y, test_X, test_y
+
+    def _preprocess_data(self, task_attributes):
+        """Preprocess data.
+
+        This function preprocessed data for machine learning.
+
+        Args:
+            input_data -- array with input_data of shape
+                          [num_samples X sequence_length X num_features]
+            labels -- array with labels of shape [num_batches]
+        """
+        # filter features: only use features defined by USE_FEATURES
+        features = DEFAULT_FEATURES  # get default features
+        # iterate over all default features beginning at the end
+        for idx, name in reversed(list(enumerate(features))):
+            if name not in USE_FEATURES:  # check if feature should be deleted
+                for key, value in task_attributes.items():  # iterate over all tasks
+                    task_attributes[key] = value[:idx] + value[idx + 1:]  # delete feature
+        # update features
+        features = [x for x in features if x in USE_FEATURES]
+
+        # do one hot encoding for PKG feature
+        idx = features.index('PKG')  # get index of 'PKG'
+        for key, value in task_attributes.items():  # iterate over all tasks
+            pkg = value[idx]  # get pkg
+            # replace pkg with one hot encoded
+            task_attributes[key] = value[:idx] + tuple(TASK_PKG_DICT[pkg]) + value[idx + 1:]
+        # update features
+        features = features[:idx] + ['PKG_cond_mod', 'PKG_hey', 'PKG_pi',
+                                     'PKG_tumatmul'] + features[idx + 1:]
+
+        return task_attributes
 
 
 class _Dataset():
@@ -495,9 +627,11 @@ class _Dataset():
     """
 
     def __init__(self, input_data, labels):
-        """Constructor.
+        """Constructor of class _Dataset.
 
-        This function initializes a _Dataset.
+        Args:
+            input_data -- an array with the input data
+            labels -- an array with labels
         """
         self.input_data = input_data  # the input data
         self.labels = labels  # the labels
@@ -506,8 +640,10 @@ class _Dataset():
     def next_batch(self, batch_size):
         """Create the next batch of data.
 
-        This function creates the next batch of the dataset.
+        This function returns the next batch of the dataset.
 
+        Args:
+            batch_size -- size of the batch
         Return:
             batch_x -- next batch of input data
             batch_y -- next batch of labels
@@ -529,7 +665,7 @@ class _Dataset():
     def make_batch(data, batch_size, count):
         """Create a batch of data.
 
-        This function creates a batch of data of the size batch_size.
+        This function creates a batch of data of size batch_size.
 
         Args:
             data -- a data array
@@ -574,6 +710,5 @@ if __name__ == "__main__":
     # initialize logging
     init_logging()
 
+    # create database
     my_db = Database()
-    tasksets, labels, _ = my_db.read_all_tasksets()
-    my_dataset = _Dataset(tasksets, labels)
