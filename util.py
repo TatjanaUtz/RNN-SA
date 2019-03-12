@@ -3,6 +3,7 @@
 from yaml import load
 from tensorflow.contrib.training import HParams
 import tensorflow as tf
+import os, time
 
 class YParams(HParams):
     def __init__(self, yaml_fn, config_name):
@@ -13,6 +14,27 @@ class YParams(HParams):
             for k, v in load(fp)[config_name].items():
                 self.add_hparam(k, v)
                 self.dictionary[k] = v
+
+class Config(HParams):
+    def __init__(self, yaml_fn, config_name):
+        """Constructor."""
+        super().__init__()
+        self.dictionary = dict()
+        with open(yaml_fn) as fp:
+            for k, v in load(fp)[config_name].items():
+                self.add_hparam(k, v)
+                self.dictionary[k] = v
+
+        # add tensorboard log dir
+        tensorboard_log_dir = os.path.join("experiments", time.strftime("%Y-%m-%d\\", time.localtime()), config_name, "logs\\")
+        self.add_hparam('tensorboard_log_dir', tensorboard_log_dir)
+        self.dictionary['tensorboard_log_dir'] = tensorboard_log_dir
+
+        # add checkpoint dir
+        checkpoint_dir = os.path.join("experiments", time.strftime("%Y-%m-%d\\", time.localtime()), config_name, "checkpoints\\")
+        self.add_hparam('checkpoint_dir', checkpoint_dir)
+        self.dictionary['checkpoint_dir'] = checkpoint_dir
+
 
 def variable_summaries(var):
     """ This helper function from the TensorFlow documentation adds a few operations to log the
