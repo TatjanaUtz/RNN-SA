@@ -3,8 +3,8 @@ import logging  # for logging
 import os
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.layers import Dense, LSTM, Dropout  # for input and dense Keras layers
-from keras.models import Sequential  # for sequential Keras model
+from keras.layers import Dense, LSTM, Dropout
+from keras.models import Sequential
 
 
 class BaseModel:
@@ -263,9 +263,6 @@ class BaseModel:
             batch_size=self.hparams.batch_size,
             # 0 or 1, verbosity mode, 0 = silent, 1 = progress bar
             verbose=self.hparams.verbose_eval,
-            # List of keras.callbacks.Callback instances; list of callbacks to apply during
-            # evaluation (default: None)
-            callbacks=self.callbacks
         )
 
 
