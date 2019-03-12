@@ -262,7 +262,7 @@ class BaseModel:
             # Integer or None; number of samples per evaluation step (default: None = 32)
             batch_size=self.hparams.batch_size,
             # 0 or 1, verbosity mode, 0 = silent, 1 = progress bar
-            verbose=self.config.verbose_eval,
+            verbose=self.hparams.verbose_eval,
             # List of keras.callbacks.Callback instances; list of callbacks to apply during
             # evaluation (default: None)
             callbacks=self.callbacks
