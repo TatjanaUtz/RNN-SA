@@ -3,13 +3,12 @@
 Run this file for schedulability analysis with recurrent neural network (RNN).
 """
 
-import time
-
-from tensorflow import keras
+import logging  # for logging
+import time  # for measuring time
 
 import logging_config
 from database_interface import Database
-from ml_models import LSTMModel
+from ml_models import SimpleRNN, GRU, LSTM
 from util import YParams, Config
 
 
@@ -18,30 +17,69 @@ def main():
     # initialize logging
     logging_config.init_logging()
 
+    # create logger
+    logger = logging.getLogger('RNN-SA.main.main')
+
     # load data from the database
     mydb = Database()
     train_X, train_y, test_X, test_y = mydb.load_data()
 
-    # prepare the data: pad sequences to uniform length
-    train_X = keras.preprocessing.sequence.pad_sequences(train_X, padding='post', dtype=list)
-    test_X = keras.preprocessing.sequence.pad_sequences(test_X, padding='post', dtype=list)
+    # ----- SimpleRNN -----
+    # get hyperparameter and configuration parameter
+    hparams = YParams('hparams.yaml', 'SimpleRNN')
+    config = Config('config.yaml', 'SimpleRNN')
 
-    # get hyperparameter and configuration parameter for LSTM
-    hparams_LSTM = YParams('hparams.yaml', 'LSTM')
-    config_LSTM = Config('config.yaml', 'LSTM')
+    # create the model
+    simple_rnn = SimpleRNN(hparams, config)
 
-    # create a LSTM model
-    LSTM = LSTMModel(hparams_LSTM, config_LSTM)
-
-    # train the LSTM model
+    # train the model
     start_time = time.time()
-    LSTM.train(train_X, train_y)
-    print("Time elapsed for training: ", time.time() - start_time)
+    simple_rnn.train(train_X, train_y)
+    logger.info("Time elapsed for training: %f", time.time() - start_time)
 
-    # evaluate the LSTM model
+    # evaluate the model
     start_time = time.time()
-    LSTM.evaluate(test_X, test_y)
-    print("Time elapsed for evaluation: ", time.time() - start_time)
+    loss, acc = simple_rnn.evaluate(test_X, test_y)
+    logger.info("Test loss = %f, test accuracy = %f", loss, acc)
+    logger.info("Time elapsed for evaluation: %f", time.time() - start_time)
+
+    # ----- GRU -----
+    # get hyperparameter and configuration parameter
+    hparams = YParams('hparams.yaml', 'GRU')
+    config = Config('config.yaml', 'GRU')
+
+    # create the model
+    gru = GRU(hparams, config)
+
+    # train the model
+    start_time = time.time()
+    gru.train(train_X, train_y)
+    logger.info("Time elapsed for training: %f", time.time() - start_time)
+
+    # evaluate the model
+    start_time = time.time()
+    loss, acc = gru.evaluate(test_X, test_y)
+    logger.info("Test loss = %f, test accuracy = %f", loss, acc)
+    logger.info("Time elapsed for evaluation: %f", time.time() - start_time)
+
+    # ----- LSTM -----
+    # get hyperparameter and configuration parameter
+    hparams = YParams('hparams.yaml', 'LSTM')
+    config = Config('config.yaml', 'LSTM')
+
+    # create the model
+    lstm = LSTM(hparams, config)
+
+    # train the model
+    start_time = time.time()
+    lstm.train(train_X, train_y)
+    logger.info("Time elapsed for training: %f", time.time() - start_time)
+
+    # evaluate the model
+    start_time = time.time()
+    loss, acc = lstm.evaluate(test_X, test_y)
+    logger.info("Test loss = %f, test accuracy = %f", loss, acc)
+    logger.info("Time elapsed for evaluation: %f", time.time() - start_time)
 
 
 if __name__ == "__main__":

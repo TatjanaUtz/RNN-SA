@@ -14,12 +14,12 @@ default: &DEFAULT
   checkpoint_period: 1  # interval (number of epochs) between checkpoints (default: 1)
 
   # TensorBoard: TensorBoard visualization
-  tensorboard_histogram_freq: 0 # frequency (in epochs) at which to compute activation and weight
+  tensorboard_histogram_freq: 1 # frequency (in epochs) at which to compute activation and weight
   # histograms for the layers of the model, if set to 0 histograms won't be computed, validation
   # data (or split) must be specified for histogram visualizations (default: 0)
   tensorboard_write_graph: False  # whether to visualize the graph in TensorBoard, the log file can
   # become quite large when write_graph is set to True (default: True)
-  tensorboard_write_grads: False  # whether to visualize gradient histograms in TensorBoard,
+  tensorboard_write_grads: True  # whether to visualize gradient histograms in TensorBoard,
   # histogram_freq must be greater than 0 (default: False)
   tensorboard_write_images: False # whether to write model weights to visualize as image in
   # TensorBoard (default: False)
@@ -28,6 +28,14 @@ default: &DEFAULT
   # integer (let's say 10000) the callback will write the metrics and losses to TensorBoard every
   # 10000 samples, Note that writing too frequently to TensorBoard can slow down your training
   # (default: 'epoch')
+
+SimpleRNN:
+  <<: *DEFAULT
+  name: 'SimpleRNN'
+
+GRU:
+  <<: *DEFAULT
+  name: 'GRU'
 
 LSTM:
   <<: *DEFAULT

@@ -3,7 +3,7 @@ import logging  # for logging
 import os
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.layers import Dense, LSTM, Dropout
+from keras.layers import Dense, LSTM, Dropout, SimpleRNN, GRU
 from keras.models import Sequential
 
 
@@ -271,6 +271,7 @@ class BaseModel:
         # return loss and accuracy
         return loss, accuracy
 
+
 class SimpleRNN(BaseModel):
     """Simple recurrent neural network.
 
@@ -369,6 +370,7 @@ class SimpleRNN(BaseModel):
             # you will use metrics=['accuracy'] (default: None)
             metrics=['accuracy'])
 
+
 class GRU(BaseModel):
     """Gated Recurrent Unit.
 
@@ -466,6 +468,7 @@ class GRU(BaseModel):
             # List of metrics to be evaluated by the model during training and testing; typically
             # you will use metrics=['accuracy'] (default: None)
             metrics=['accuracy'])
+
 
 class LSTM(BaseModel):
     """LSTM Model.
