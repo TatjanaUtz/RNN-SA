@@ -245,9 +245,12 @@ class BaseModel:
         Args:
             test_X -- a ipnut data array
             test_y -- the labels
+        Return:
+            loss -- scalar test loss
+            accuracy -- scalar test accuracy
         """
         # evaluate a model: returns the loss value & metrics values for the model in test mode
-        self.results = self.model.evaluate(
+        loss, accuracy = self.model.evaluate(
             # Numpy array of test data (if the model has a single input), or list of Numpy arrays
             # (if the model has multiple inputs); if input layers in the model are named, you can
             # also pass a dictionary mapping input names to Numpy arrays; x can be None if feeding
@@ -265,8 +268,206 @@ class BaseModel:
             verbose=self.hparams.verbose_eval,
         )
 
+        # return loss and accuracy
+        return loss, accuracy
 
-class LSTMModel(BaseModel):
+class SimpleRNN(BaseModel):
+    """Simple recurrent neural network.
+
+    This class represents a simple recurrent neural network (RNN) build with Keras.
+    """
+
+    def __init__(self, hparams, config):
+        """Constructor of class SimpleRNN.
+
+        Args:
+            hparams -- hyperparameter
+            config -- configuration parameter
+        """
+        # Initialize BaseModel
+        super(SimpleRNN, self).__init__(hparams, config)
+
+        # Build the model
+        self.build_model()
+
+    def build_model(self):
+        """Build the RNN model.
+
+        This function creates a RNN model.
+        """
+        # Create sequential model
+        self.model = Sequential()
+
+        # create recurrent (RNN) layer
+        rnn_layer = SimpleRNN(
+            # positive integer, dimensionality of the output space
+            units=self.hparams.hidden_layer_size,
+            # activation function to use; if you pass None, no activation is applied (ie. "linear"
+            # activation: a(x) = x) (default: 'tanh')
+            activation=self.hparams.hidden_activation_function,
+        )
+
+        # create dropout layer if necessary: applies Dropout to the input
+        # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
+        # during training time, which helps prevent overfitting
+        if self.hparams.keep_prob < 1.0:
+            dropout_layer = Dropout(
+                # float between 0 and 1, fraction of the input units to drop
+                rate=self.hparams.keep_prob
+            )
+
+        # if more than one RNN layer should be used, create a hidden RNN layer which outputs the
+        # sequence instead of only the last output
+        if self.hparams.num_cells > 1:
+            hidden_rnn_layer = SimpleRNN(
+                # positive integer, dimensionality of the output space
+                units=self.hparams.hidden_layer_size,
+                # activation function to use; if you pass None, no activation is applied (ie. "linear"
+                # activation: a(x) = x) (default: 'tanh')
+                activation=self.hparams.hidden_activation_function,
+                # Boolean, whether to return the last output in the output sequence, or the full
+                # sequence
+                return_sequences=True
+            )
+
+            # if more than one RNN layer should be used, start with adding (num_cells - 1) hidden
+            # RNN layers
+            for i in range(self.hparams.num_cells - 1):
+                self.model.add(hidden_rnn_layer)
+
+                # add dropout layer if necessary
+                if self.hparams.keep_prob < 1.0:
+                    self.model.add(dropout_layer)
+
+        # add a last LSTM layer which outputs only the last output (not the sequence)
+        self.model.add(rnn_layer)
+
+        # if necessary add dropout layer
+        if self.hparams.keep_prob < 1.0:
+            self.model.add(dropout_layer)
+
+        # create and add a regular densely-connected NN layer as output layer
+        # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
+        # encoding) and the activation should be 'sigmoid'
+        output_layer = Dense(
+            # positive integer, dimensionality of the output space
+            units=self.hparams.num_classes,
+            # activation function to use; if you don't specify anything, no activation is applied
+            # (ie. "linear" activation: a(x) = x) (default: None)
+            activation='sigmoid'
+        )
+        self.model.add(output_layer)
+
+        # Configure the model for training (create optimizer and loss function)
+        # for binary classification the loss function should be 'binary_crossentropy'
+        self.model.compile(
+            # String (name of optimizer) or optimizer instance
+            optimizer=self.hparams.optimizer,
+            # String (name of objective function) or objective function (default: None)
+            loss='binary_crossentropy',
+            # List of metrics to be evaluated by the model during training and testing; typically
+            # you will use metrics=['accuracy'] (default: None)
+            metrics=['accuracy'])
+
+class GRU(BaseModel):
+    """Gated Recurrent Unit.
+
+    This class represents a Gated Recurrent Unit (GRU) - Cho et al. 2014.
+    """
+
+    def __init__(self, hparams, config):
+        """Constructor of class GRU.
+
+        Args:
+            hparams -- hyperparameter
+            config -- configuration parameter
+        """
+        # Initialize BaseModel
+        super(GRU, self).__init__(hparams, config)
+
+        # Build the model
+        self.build_model()
+
+    def build_model(self):
+        """Build the GRU model.
+
+        This function creates a GRU model.
+        """
+        # Create sequential model
+        self.model = Sequential()
+
+        # create GRU layer
+        gru_layer = GRU(
+            # positive integer, dimensionality of the output space
+            units=self.hparams.hidden_layer_size,
+            # activation function to use; if you pass None, no activation is applied (ie. "linear"
+            # activation: a(x) = x) (default: 'tanh')
+            activation=self.hparams.hidden_activation_function,
+        )
+
+        # create dropout layer if necessary: applies Dropout to the input
+        # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
+        # during training time, which helps prevent overfitting
+        if self.hparams.keep_prob < 1.0:
+            dropout_layer = Dropout(
+                # float between 0 and 1, fraction of the input units to drop
+                rate=self.hparams.keep_prob
+            )
+
+        # if more than one GRU layer should be used, create a hidden GRU layer which outputs the
+        # sequence instead of only the last output
+        if self.hparams.num_cells > 1:
+            hidden_gru_layer = GRU(
+                # positive integer, dimensionality of the output space
+                units=self.hparams.hidden_layer_size,
+                # activation function to use; if you pass None, no activation is applied (ie. "linear"
+                # activation: a(x) = x) (default: 'tanh')
+                activation=self.hparams.hidden_activation_function,
+                # Boolean, whether to return the last output in the output sequence, or the full
+                # sequence
+                return_sequences=True
+            )
+
+            # if more than one GRU layer should be used, start with adding (num_cells - 1) hidden
+            # GRU layers
+            for i in range(self.hparams.num_cells - 1):
+                self.model.add(hidden_gru_layer)
+
+                # add dropout layer if necessary
+                if self.hparams.keep_prob < 1.0:
+                    self.model.add(dropout_layer)
+
+        # add a last GRU layer which outputs only the last output (not the sequence)
+        self.model.add(gru_layer)
+
+        # if necessary add dropout layer
+        if self.hparams.keep_prob < 1.0:
+            self.model.add(dropout_layer)
+
+        # create and add a regular densely-connected NN layer as output layer
+        # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
+        # encoding) and the activation should be 'sigmoid'
+        output_layer = Dense(
+            # positive integer, dimensionality of the output space
+            units=self.hparams.num_classes,
+            # activation function to use; if you don't specify anything, no activation is applied
+            # (ie. "linear" activation: a(x) = x) (default: None)
+            activation='sigmoid'
+        )
+        self.model.add(output_layer)
+
+        # Configure the model for training (create optimizer and loss function)
+        # for binary classification the loss function should be 'binary_crossentropy'
+        self.model.compile(
+            # String (name of optimizer) or optimizer instance
+            optimizer=self.hparams.optimizer,
+            # String (name of objective function) or objective function (default: None)
+            loss='binary_crossentropy',
+            # List of metrics to be evaluated by the model during training and testing; typically
+            # you will use metrics=['accuracy'] (default: None)
+            metrics=['accuracy'])
+
+class LSTM(BaseModel):
     """LSTM Model.
 
     Recurrent neural network based on LSTM cells.
@@ -280,7 +481,7 @@ class LSTMModel(BaseModel):
             config -- configuration parameter
         """
         # Initialize BaseModel
-        super(LSTMModel, self).__init__(hparams, config)
+        super(LSTM, self).__init__(hparams, config)
 
         # Build the model
         self.build_model()
@@ -311,15 +512,39 @@ class LSTMModel(BaseModel):
                 rate=self.hparams.keep_prob
             )
 
-        # add LSTM layers to the model
-        for i in range(self.hparams.num_cells):
-            self.model.add(lstm_layer)
+        # if more than one LSTM layer should be used, create a hidden LSTM layer which outputs the
+        # sequence instead of only the last output
+        if self.hparams.num_cells > 1:
+            hidden_lstm_layer = LSTM(
+                # positive integer, dimensionality of the output space
+                units=self.hparams.hidden_layer_size,
+                # activation function to use; if you pass None, no activation is applied (ie. "linear"
+                # activation: a(x) = x) (default: 'tanh')
+                activation=self.hparams.hidden_activation_function,
+                # Boolean, whether to return the last output in the output sequence, or the full
+                # sequence
+                return_sequences=True
+            )
 
-            # add dropout layer if necessary
-            if self.hparams.keep_prob < 1.0:
-                self.model.add(dropout_layer)
+            # if more than one LSTM layer should be used, start with adding (num_cells - 1) hidden
+            # LSTM layers
+            for i in range(self.hparams.num_cells - 1):
+                self.model.add(hidden_lstm_layer)
+
+                # add dropout layer if necessary
+                if self.hparams.keep_prob < 1.0:
+                    self.model.add(dropout_layer)
+
+        # add a last LSTM layer which outputs only the last output (not the sequence)
+        self.model.add(lstm_layer)
+
+        # if necessary add dropout layer
+        if self.hparams.keep_prob < 1.0:
+            self.model.add(dropout_layer)
 
         # create and add a regular densely-connected NN layer as output layer
+        # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
+        # encoding) and the activation should be 'sigmoid'
         output_layer = Dense(
             # positive integer, dimensionality of the output space
             units=self.hparams.num_classes,
@@ -330,11 +555,12 @@ class LSTMModel(BaseModel):
         self.model.add(output_layer)
 
         # Configure the model for training (create optimizer and loss function)
+        # for binary classification the loss function should be 'binary_crossentropy'
         self.model.compile(
             # String (name of optimizer) or optimizer instance
             optimizer=self.hparams.optimizer,
             # String (name of objective function) or objective function (default: None)
-            loss=self.hparams.loss,
+            loss='binary_crossentropy',
             # List of metrics to be evaluated by the model during training and testing; typically
             # you will use metrics=['accuracy'] (default: None)
             metrics=['accuracy'])
