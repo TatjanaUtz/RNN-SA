@@ -29,14 +29,7 @@ default: &DEFAULT
   # 10000 samples, Note that writing too frequently to TensorBoard can slow down your training
   # (default: 'epoch')
 
-SimpleRNN:
-  <<: *DEFAULT
-  name: 'SimpleRNN'
-
-GRU:
-  <<: *DEFAULT
-  name: 'GRU'
-
 LSTM:
   <<: *DEFAULT
   name: 'LSTM'
+  tensorboard_log_dir: '.\\experiments\\LSTM\\logs\\partial_standardized_data\\'
