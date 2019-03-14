@@ -10,7 +10,9 @@ import sqlite3  # for working with the database
 from random import shuffle  # for shuffle of the task-sets
 
 import numpy as np  # for arrays
+import sklearn  # for data preprocessing (normalization)
 from sklearn.model_selection import train_test_split
+from tensorflow import keras
 
 from logging_config import init_logging
 
@@ -375,7 +377,6 @@ class Database():
 
         return taskset_ids, tasksets, labels
 
-
     def read_table_executiontimes(self):
         """Read table ExecutionTimes.
 
@@ -474,7 +475,7 @@ class Database():
 
         self._open_db()  # open database
         # read all tasks
-        self.db_cursor.execute("SELECT * FROM Task")
+        self.db_cursor.execute("SELECT * FROM Task ORDER BY Task_ID ASC")
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
 
@@ -482,14 +483,9 @@ class Database():
             logger.debug("No task read!")
             return None
 
-        task_attributes = dict()  # create empty dictionary
-
-        for row in rows:  # iterate over all tasks
-            task_attributes[row[0]] = row[1:]  # add task to dictionary
-
         # do data preprocessing
         if preprocessing:
-            task_attributes = self._preprocess_data(task_attributes)
+            task_attributes = self._preprocess_tasks(rows)
 
         return task_attributes
 
@@ -579,42 +575,106 @@ class Database():
         tasksets_np = np.asarray(tasksets)
         labels_np = np.asarray(labels, np.int32)
 
+        # pad sequences to uniform length
+        tasksets_np = keras.preprocessing.sequence.pad_sequences(
+            sequences=tasksets_np,  # list of lists, where each element is a sequence
+            maxlen=None,  # Int, maximum length of all sequences (default: None)
+            # Type of the output sequences, to pad sequences with variable length string you can use
+            # object (default: 'int32')
+            dtype=list,
+            # String, 'pre' or 'post': pad either before or after each sequence (default: 'pre')
+            padding='post',
+            # String, 'pre' or 'post': remove values from sequences larger than  maxlen, either at
+            # the beginning or at the end of the sequences (default: 'pre')
+            truncating='pre',
+            value=0.0  # Float or String, padding value (default: 0.0)
+        )
+
         # split data into training and test
         train_X, test_X, train_y, test_y = train_test_split(tasksets_np, labels_np)
 
         # return task-sets and labels
         return train_X, train_y, test_X, test_y
 
-    def _preprocess_data(self, task_attributes):
-        """Preprocess data.
+    def _preprocess_tasks(self, task_attributes):
+        """Preprocess the tasks.
 
-        This function preprocessed data for machine learning.
+        This function preprocessed the task attributes for machine learning.
+        First all unused features are deleted. Then all non-numeric values are one hot encoded.
+        Finally the features are normalized.
 
         Args:
-            input_data -- array with input_data of shape
-                          [num_samples X sequence_length X num_features]
-            labels -- array with labels of shape [num_batches]
+            task_attributes -- dictionary with all tasks and their attributes
         """
+        # --- delete unused features ---
         # filter features: only use features defined by USE_FEATURES
+        task_attributes = [x[1:] for x in task_attributes]  # delete task ID
         features = DEFAULT_FEATURES  # get default features
+
         # iterate over all default features beginning at the end
         for idx, name in reversed(list(enumerate(features))):
             if name not in USE_FEATURES:  # check if feature should be deleted
-                for key, value in task_attributes.items():  # iterate over all tasks
-                    task_attributes[key] = value[:idx] + value[idx + 1:]  # delete feature
+                # delete feature
+                task_attributes = [x[:idx] + x[idx + 1:] for x in task_attributes]
+
         # update features
         features = [x for x in features if x in USE_FEATURES]
 
+        # --- one hot encoding ---
         # do one hot encoding for PKG feature
         idx = features.index('PKG')  # get index of 'PKG'
-        for key, value in task_attributes.items():  # iterate over all tasks
-            pkg = value[idx]  # get pkg
-            # replace pkg with one hot encoded
-            task_attributes[key] = value[:idx] + tuple(TASK_PKG_DICT[pkg]) + value[idx + 1:]
+        # replace PKG with one hot encoded
+        task_attributes = [x[:idx] + tuple(TASK_PKG_DICT[x[idx]]) + x[idx + 1:] for x in
+                           task_attributes]
+
         # update features
         features = features[:idx] + ['PKG_cond_mod', 'PKG_hey', 'PKG_pi',
                                      'PKG_tumatmul'] + features[idx + 1:]
 
+        # --- normalization ---
+        # task_attributes = self._normalization(task_attributes, features)
+
+        # return processed task attributes
+        return task_attributes
+
+    def _normalization(self, task_attributes, features):
+        """Normalization of task attributes.
+
+        Args:
+            task_attributes -- list with task attributes
+            features -- used features that are included in the task attributes
+        Return:
+            task_attributes -- list with normalized task attributes
+        """
+        # convert list of tuples to numpy array
+        task_attributes_np = np.asarray(task_attributes, dtype=np.float32)
+
+        # normalize Priority and Number_of_Jobs
+        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))  # create normalization
+        idx = features.index('Priority')  # get index of Priority
+        scaler.fit(task_attributes_np[:, [idx]])  # train the normalization
+        task_attributes_np[:, [idx]] = scaler.transform(
+            task_attributes_np[:, [idx]])  # transform Priority
+        idx = features.index('Number_of_Jobs')  # get index of Number_of_Jobs
+        scaler.fit(task_attributes_np[:, [idx]])  # train the normalization
+        task_attributes_np[:, [idx]] = scaler.transform(
+            task_attributes_np[:, [idx]])  # transform Number_of_Jobs
+
+        # normalize CRITICALTIME and Period
+        idx_1 = features.index('CRITICALTIME')  # get index of CRITICALTIME
+        values_1 = task_attributes_np[:, [idx_1]]  # get all critial times
+        idx_2 = features.index('Period')  # get index of Period
+        values_2 = task_attributes_np[:, [idx_2]]  # get all periods
+        values = np.concatenate((values_1, values_2))  # concatenate critical times and periods
+
+        scaler.fit(values)  # train normalization
+        task_attributes_np[:, [idx_1]] = scaler.transform(values_1)  # transform CRITICALTIME
+        task_attributes_np[:, [idx_2]] = scaler.transform(values_2)  # transform Period
+
+        # convert numpy array back to list of tuples
+        task_attributes = [tuple(x) for x in task_attributes_np]
+
+        # return normalized task attributes
         return task_attributes
 
 
@@ -712,3 +772,5 @@ if __name__ == "__main__":
 
     # create database
     my_db = Database()
+    tasksets, labels = my_db.load_data()
+    print("Dummy")
