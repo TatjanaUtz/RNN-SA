@@ -31,20 +31,18 @@ class Config(HParams):
                 self.dictionary[k] = v
 
         # add tensorboard log dir
-        tensorboard_log_dir = os.path.join("experiments",
-                                           time.strftime("%Y-%m-%d\\", time.localtime()),
-                                           config_name, "logs\\")
-        self.add_hparam('tensorboard_log_dir', tensorboard_log_dir)
-        self.dictionary['tensorboard_log_dir'] = tensorboard_log_dir
+        # tensorboard_log_dir = os.path.join("experiments\\", config_name, "logs\\",
+        #                                    time.strftime("%Y-%m-%d-%H-%M\\", time.localtime()))
+        # self.add_hparam('tensorboard_log_dir', tensorboard_log_dir)
+        # self.dictionary['tensorboard_log_dir'] = tensorboard_log_dir
 
         # add checkpoint dir
-        checkpoint_dir = os.path.join("experiments", time.strftime("%Y-%m-%d\\", time.localtime()),
-                                      config_name, "checkpoints\\")
+        checkpoint_dir = os.path.join("experiments", config_name, "checkpoints\\")
         self.add_hparam('checkpoint_dir', checkpoint_dir)
         self.dictionary['checkpoint_dir'] = checkpoint_dir
 
         # create tensorboard and checkpoint dir
-        create_dirs([tensorboard_log_dir, checkpoint_dir])
+        create_dirs([self.dictionary['tensorboard_log_dir'], checkpoint_dir])
 
 
 def variable_summaries(var):
