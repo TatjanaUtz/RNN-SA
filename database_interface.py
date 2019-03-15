@@ -486,6 +486,7 @@ class Database():
         # do data preprocessing
         if preprocessing:
             task_attributes = self._preprocess_tasks(rows)
+        else: task_attributes = rows
 
         return task_attributes
 
