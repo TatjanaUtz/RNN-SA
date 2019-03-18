@@ -5,10 +5,10 @@ execution times are calculated and saved to the database.
 """
 import logging
 
-from database_interface import Database
+import database_interface
 
 
-def benchmark_runtimes():
+def benchmark_runtimes(database):
     """ Benchmark test to get execution times of tasks.
 
     Reads all jobs of all tasks from the database and calculates the minimum, maximum and average
@@ -16,34 +16,35 @@ def benchmark_runtimes():
     """
     # create logger
     logger = logging.getLogger('RNN-SA.benchmark_runtimes.benchmark_runtimes')
-
-    # create database object
-    my_database = Database()
-
-    logger.debug("Starting to benchmark runtimes...")
+    logger.info("Starting to benchmark runtimes...")
 
     # Get all tasks from the database
-    # TODO: Create method get_all_tasks()
-    task_list = my_database.get_all_tasks()
+    task_list = database.read_table_task()
 
     # create empty dictionary
     task_dict = dict()
 
     # iterate over all tasks
     for task in task_list:
+        pkg = task[5]
+        arg = task[6]
         # get all pkg and all combinations of pkg and arg from the task list
-        if task.pkg not in task_dict:  # pkg not in the dictionary
-            task_dict[task.pkg] = []  # add pkg
-        if (task.pkg, task.arg) not in task_dict:  # (pkg, arg) not in dictionary
-            task_dict[(task.pkg, task.arg)] = []  # add (pkg, arg)
+        if pkg not in task_dict:  # pkg not in the dictionary
+            task_dict[pkg] = []  # add pkg
+        if (pkg, arg) not in task_dict:  # (pkg, arg) not in dictionary
+            task_dict[(pkg, arg)] = []  # add (pkg, arg)
 
-        # get execution times of all jobs of the current task
-        job_list = my_database.get_jobs_c_of_task(task.id)
+        # read all sucessfully run jobs of the task
+        job_attributes = database.read_table_job(task_id=task[0], exit_value='EXIT')
 
-        # add execution times to the dictionary
-        if job_list is not -1:  # at least one job was found
-            task_dict[task.pkg].extend(job_list)  # add execution times to PKG
-            task_dict[(task.pkg, task.arg)].extend(job_list)  # add execution times to (PKG, arg)
+        # check if at least one job was read
+        if job_attributes:
+            # calculate execution time of each job
+            job_list = _calculate_executiontimes(job_attributes)
+
+            # add execution times to the dictionary
+            task_dict[pkg].extend(job_list)  # add execution times to PKG
+            task_dict[(pkg, arg)].extend(job_list)  # add execution times to (PKG, arg)
 
     # empty list for keys to be deleted, because no successful jobs were found
     delete_keys = []
@@ -68,9 +69,37 @@ def benchmark_runtimes():
     logger.debug("Saving calculated execution times to database...")
 
     # save execution times to database
-    my_database.save_execution_times(task_dict)
+    database.write_execution_time(task_dict)
 
     logger.debug("Saving successful! Benchmark finished!")
+
+def _calculate_executiontimes(job_attributes):
+    """Calculate the executiontimes of jobs.
+
+    This method calculates the executiontimes of a list of jobs with the following attributes:
+        Set_ID
+        Task_ID
+        Job_ID
+        Start_Date
+        End_Date
+        Exit_Value
+
+    Args:
+        job_attributes -- list with the job attributes
+    Return:
+        executiontimes -- list with the executiontimes
+    """
+    executiontimes = [] # create empty list for executiontimes
+
+    # iterate over all jobs
+    for job in job_attributes:
+        execution_time = job[4] - job[3]    # calculate executiontime = end_date - start_date
+
+        # check if execution_time is valid
+        if execution_time > 0:
+            executiontimes.append(execution_time)   # append executiontime to list
+
+    return executiontimes
 
 
 if __name__ == "__main__":
