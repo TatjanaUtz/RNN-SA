@@ -12,14 +12,14 @@ from functools import reduce
 from simso.configuration import Configuration
 from simso.core import Model
 
-from database_interface import Database
+import database_interface
 from logging_config import init_logging
 
 
 def main():
     """Main function of module database_filter."""
     init_logging()  # Initialize and start logging
-    my_database = Database()  # create connection to the database
+    my_database = database_interface.Database()  # create connection to the database
     filter_database(my_database)  # filter the database
 
 
@@ -34,6 +34,7 @@ def filter_database(database):
     """
     # create logger
     logger = logging.getLogger('RNN-SA.database_filter.filter_database')
+    logger.info('Starting to filter task-sets...')
 
     # save start time
     start_time = time.time()
@@ -96,14 +97,14 @@ def _add_execution_time(task_attributes, execution_times):
         task_attributes -- dictionary with task attributes including the execution time
     """
     # iterate over all tasks
-    for task_id in task_attributes:
+    for i, _ in enumerate(task_attributes):
 
         # convert tuple to list
-        task = list(task_attributes[task_id])
+        task = list(task_attributes[i])
 
         # Define execution time depending on PKG and Arg
-        pkg = task_attributes[task_id][4]
-        arg = task_attributes[task_id][5]
+        pkg = task_attributes[i][5]
+        arg = task_attributes[i][6]
         if (pkg, arg) in execution_times:  # combination of pkg and arg exists
             execution_time = execution_times[(pkg, arg)]
         else:  # combination of pkg and arg does not exist
@@ -117,7 +118,7 @@ def _add_execution_time(task_attributes, execution_times):
         task = tuple(task)
 
         # update task attributes dictionary
-        task_attributes.update({task_id: task})
+        task_attributes[i] = task
 
     return task_attributes
 
@@ -142,8 +143,8 @@ def simulate(taskset):
     # Get the periods of the tasks
     periods = []
     for i, task in enumerate(taskset):
-        if task[9] not in periods:
-            periods.append(task[9])
+        if task[10] not in periods:
+            periods.append(task[10])
 
     # Calculate the hyperperiod of the tasks
     hyper_period = _lcm(periods)
@@ -157,11 +158,11 @@ def simulate(taskset):
     # Add the tasks to the list of tasks
     for i, task in enumerate(taskset):
         task_name = "T" + str(i)
-        activation_dates = _get_activation_dates(hyper_period, task[9], task[10])
+        activation_dates = _get_activation_dates(hyper_period, task[10], task[11])
         configuration.add_task(name=task_name, identifier=i, task_type="Sporadic",
-                               period=task[9], activation_date=0, wcet=task[-1],
-                               deadline=task[8], list_activation_dates=activation_dates,
-                               data={'priority': task[0]})
+                               period=task[10], activation_date=0, wcet=task[-1],
+                               deadline=task[9], list_activation_dates=activation_dates,
+                               data={'priority': task[1]})
 
     # Add a processor to the list of processors
     configuration.add_processor(name="CPU1", identifier=1)
