@@ -21,8 +21,14 @@ def main():
     # create logger
     logger = logging.getLogger('RNN-SA.main.main')
 
+    # Create a database object
+    try:
+        mydb = Database()
+    except Exception as exc:
+        logger.error('Could not create database object: {}'.format(exc))
+        return
+
     # load data from the database
-    mydb = Database()
     train_X, train_y, test_X, test_y = mydb.load_data()
 
     # ----- LSTM -----
