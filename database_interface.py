@@ -14,6 +14,8 @@ import sklearn  # for data preprocessing (normalization)
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 
+from benchmark_runtimes import benchmark_runtimes
+from database_filter import filter_database
 from logging_config import init_logging
 
 # task attributes that should be used for classifying task-sets
@@ -85,45 +87,136 @@ class Database():
     def __init__(self):
         """Constructor of class Database."""
         # path to the database = current directory
-        self.db_dir = os.path.dirname(os.path.abspath(__file__))
+        # self.db_dir = os.path.dirname(os.path.abspath(__file__))
+        self.db_dir = 'C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA'
         self.db_name = 'panda_v2.db'  # name of the database with .db extension
 
         self.db_connection = None  # connection to the database
         self.db_cursor = None  # cursor to work with the database
 
+        # check if database exists
+        if not self.check_if_database_exists():
+            # database does not exist at the defined path
+            raise Exception("database '{}' not found in {}".format(self.db_name, self.db_dir))
+
+        # check database: check if all necessary tables exist
+        check_value, table_name = self.check_database()
+        if not check_value:
+            # something is not correct with the database: at least one table is missing
+            raise Exception("no such table: " + table_name)
+
     def _open_db(self):
-        """Open a database.
+        """Open the database.
 
-        This method opens the database by creating a connection and a cursor.
-        If no database defined by db_name can be found, an error message is logged.
+        This methods opens the database defined by self.db_dir and self.db_name by creating a
+        database connection and a cursor.
         """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database.open_db')
+        # create full path to the database
+        db_path = self.db_dir + "\\" + self.db_name
 
-        db_path = self.db_dir + "\\" + self.db_name  # full path to the database: directory + name
-
-        if os.path.exists(db_path):  # check if database exists
-            self.db_connection = sqlite3.connect(db_path)  # create connection to database
-            self.db_cursor = self.db_connection.cursor()  # create cursor for database
-        else:  # database does not exist
-            logger.error("Database %s not found!", self.db_name)
+        # create database connection and a cursor
+        self.db_connection = sqlite3.connect(db_path)
+        self.db_cursor = self.db_connection.cursor()
 
     def _close_db(self):
-        """Closes a database.
+        """Close the database.
 
-        This method closes the database if a connection or cursor is saved. Prior to that the
-        changes are saved.
+        This method commits the changes to the database and closes it by closing and deleting the
+        database connection and the cursor.
         """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database.close_db')
+        # commit changes and close connection to the database
+        self.db_connection.commit()
+        self.db_connection.close()
 
-        if self.db_connection is not None:  # check if connection exists = database open
-            self.db_connection.commit()  # commit changes
-            self.db_connection.close()  # close connection
-            self.db_connection = None  # delete connection
-            self.db_cursor = None  # delete cursor
-        else:  # database already closed
-            logger.debug("No open database!")
+        # delete database connection and cursor
+        self.db_connection = None
+        self.db_cursor = None
+
+    def check_if_database_exists(self):
+        """Check if the database file exists.
+
+        This method checks if the database defined by self.db_dir and self.db_name exists.
+
+        Return:
+            True/False -- whether the database exists
+        """
+        # create full path to database
+        db_path = self.db_dir + "\\" + self.db_name
+
+        # Check if database exists
+        if os.path.exists(db_path):  # database exists
+            return True
+        return False
+
+    def check_database(self):
+        """Check the database.
+
+        This method checks the database, i.e. if all necessary tables are present. The necessary
+        tables are
+            Job
+            Task
+            TaskSet
+            CorrectTaskSet
+        If a table does not exist in the database, it is created (if possible).
+
+        Return:
+            True/False -- whether all necessary tables exist
+            the name of the table which doesn't exist in the database
+        """
+        # Check table Job
+        if not self.check_if_table_exists('Job'):  # table Job does not exist
+            return False, 'Job'
+
+        # Check table Task
+        if not self.check_if_table_exists('Task'):  # table Task does not exist
+            return False, 'Task'
+
+        # check table TaskSet
+        if not self.check_if_table_exists('TaskSet'):  # table TaskSet does not exist
+            return False, 'TaskSet'
+
+        # Check table ExecutionTimes
+        if not self.check_if_table_exists('ExecutionTimes'):
+            # table ExecutionTimes does not exist: create it through benchmark
+            benchmark_runtimes(self)
+
+        # check table CorrectTaskSet
+        if not self.check_if_table_exists('CorrectTaskSet'):  # table CorrectTaskSet does not exist
+            # Create table CorrectTaskSet
+            filter_database(self)
+
+        # all tables exist
+        return True, None
+
+    def check_if_table_exists(self, table_name):
+        """Check if a table exists in the database.
+
+        This method checks if the table defined by table_name exists in the database. This is done
+        by executing a SQL query and evaluate the fetched rows. If nothing could be fetched (no rows
+        available), the table doesn't exist.
+
+        Args:
+            table_name -- name of the table that should be checked
+        Return:
+            True/False -- whether the table exists/doesn't exist in the database
+        """
+        self._open_db()  # open database
+
+        # execute the following query to determine if the table exists
+        sql_query = "SELECT * from sqlite_master " \
+                    "WHERE type = 'table' AND name = '{}'".format(table_name)
+        self.db_cursor.execute(sql_query)
+
+        # fetch all rows
+        rows = self.db_cursor.fetchall()
+
+        if not rows:  # no row could be fetched - table doesn't exist
+            self._close_db()  # close database
+            return False
+
+        # at least one row was fetched - table exists
+        self._close_db()  # close database
+        return True
 
     def read_task_attributes_preprocessed(self):
         """Read the attributes of all tasks from the database.
@@ -486,9 +579,44 @@ class Database():
         # do data preprocessing
         if preprocessing:
             task_attributes = self._preprocess_tasks(rows)
-        else: task_attributes = rows
+        else:
+            task_attributes = rows
 
         return task_attributes
+
+    def read_table_job(self, task_id=None, exit_value=None):
+        """Read the table Job.
+
+        This method reads the table Job of the database. If task_id is not specified, the hole table
+        is read. If task_id is specified, only the jobs of the task defined by task_id are read.
+        If exit_value is specified, only the jobs with this exit_value are read.
+
+        Args:
+            task_id -- ID of the task which jobs should be read
+            exit_value -- exit_value of the jobs that should be read
+        Return:
+            rows -- list with the job attributes
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_table_job")
+
+        self._open_db()  # open database
+
+        if task_id is not None and exit_value is not None:
+            # read all jobs of task_id with exit_value
+            self.db_cursor.execute("SELECT * FROM Job WHERE Task_ID = ? AND Exit_Value = ?",
+                                   (task_id, exit_value))
+        else:  # read all jobs
+            self.db_cursor.execute("SELECT * FROM Job")
+
+        rows = self.db_cursor.fetchall()  # fetch all rows
+        self._close_db()  # close database
+
+        if not rows:  # no job read
+            logger.debug("No job read!")
+            return None
+
+        return rows
 
     def write_correct_taskset(self, taskset_id, taskset, label):
         """Write a task-set to the table CorrectTaskSet.
@@ -531,6 +659,51 @@ class Database():
         # save (commit) changes
         self.db_connection.commit()
 
+        self._close_db()  # close database
+
+    def write_execution_time(self, task_dict):
+        """Write a tuple of execution times (min, max, average) to the database.
+
+        Args:
+            task_dict -- dictionary with all task execution times (= tuple of execution times
+                         (min, max, average))
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.write_execution_time')
+
+        self._open_db()  # open database
+
+        # create table CorrectTaskSet if it does not exist
+        create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTimes (" \
+                           "[PKG(Arg)] TEXT, " \
+                           "[Min_C] INTEGER, " \
+                           "[Max_C] INTEGER, " \
+                           "Average_C INTEGER, " \
+                           "PRIMARY KEY([PKG(Arg)])" \
+                           ");"
+        try:
+            self.db_cursor.execute(create_table_sql)
+        except sqlite3.Error as sqle:
+            logger.error(sqle)
+
+        # sql statement for inserting or replacing a row in the ExecutionTime table
+        insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTimes" \
+                                "([PKG(Arg)], Min_C, Max_C, Average_C)" \
+                                " VALUES(?, ?, ?, ?)"
+
+        # iterate over all keys
+        for key in task_dict:
+            if isinstance(key, str):  # key = (PKG)
+                # insert or replace task-set
+                self.db_cursor.execute(insert_or_replace_sql,
+                                       (key, task_dict[key][0], task_dict[key][1], task_dict[key][2]))
+            elif len(key) == 2: # key = PKG(Arg)
+                self.db_cursor.execute(insert_or_replace_sql, (
+                    key[0] + "(" + str(key[1]) + ")", task_dict[key][0], task_dict[key][1],
+                    task_dict[key][2]))
+
+        # save (commit) changes
+        self.db_connection.commit()
         self._close_db()  # close database
 
     def load_data(self):
