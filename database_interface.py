@@ -547,11 +547,14 @@ class Database():
             value=0.0  # Float or String, padding value (default: 0.0)
         )
 
-        # split data into training and test
-        train_X, test_X, train_y, test_y = train_test_split(tasksets_np, labels_np)
+        # split data into training and test/val: 80% training data, 20% test/validation data
+        train_X, test_val_X, train_y, test_val_y = train_test_split(tasksets_np, labels_np, test_size=0.2)
+
+        # split test/val in test and validation data: 50% data each
+        test_X, val_X, test_y, val_y = sklearn.model_selection.train_test_split(test_val_X, test_val_y, test_size=0.5)
 
         # return task-sets and labels
-        return train_X, train_y, test_X, test_y
+        return train_X, train_y, test_X, test_y, val_X, val_y
 
     def _preprocess_tasks(self, task_attributes):
         """Preprocess the tasks.
@@ -589,50 +592,17 @@ class Database():
                                      'PKG_tumatmul'] + features[idx + 1:]
 
         # --- normalization ---
-        # task_attributes = self._normalization(task_attributes, features)
+        normalized = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1)).fit_transform(task_attributes)
+
+        # --- standardization ---
+        # standardized = sklearn.preprocessing.StandardScaler().fit_transform(task_attributes)
+
+        # convert numpy array back to list of tuples
+        task_attributes = [tuple(x) for x in normalized]
 
         # return processed task attributes
         return task_attributes
 
-    def _normalization(self, task_attributes, features):
-        """Normalization of task attributes.
-
-        Args:
-            task_attributes -- list with task attributes
-            features -- used features that are included in the task attributes
-        Return:
-            task_attributes -- list with normalized task attributes
-        """
-        # convert list of tuples to numpy array
-        task_attributes_np = np.asarray(task_attributes, dtype=np.float32)
-
-        # normalize Priority and Number_of_Jobs
-        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))  # create normalization
-        idx = features.index('Priority')  # get index of Priority
-        scaler.fit(task_attributes_np[:, [idx]])  # train the normalization
-        task_attributes_np[:, [idx]] = scaler.transform(
-            task_attributes_np[:, [idx]])  # transform Priority
-        idx = features.index('Number_of_Jobs')  # get index of Number_of_Jobs
-        scaler.fit(task_attributes_np[:, [idx]])  # train the normalization
-        task_attributes_np[:, [idx]] = scaler.transform(
-            task_attributes_np[:, [idx]])  # transform Number_of_Jobs
-
-        # normalize CRITICALTIME and Period
-        idx_1 = features.index('CRITICALTIME')  # get index of CRITICALTIME
-        values_1 = task_attributes_np[:, [idx_1]]  # get all critial times
-        idx_2 = features.index('Period')  # get index of Period
-        values_2 = task_attributes_np[:, [idx_2]]  # get all periods
-        values = np.concatenate((values_1, values_2))  # concatenate critical times and periods
-
-        scaler.fit(values)  # train normalization
-        task_attributes_np[:, [idx_1]] = scaler.transform(values_1)  # transform CRITICALTIME
-        task_attributes_np[:, [idx_2]] = scaler.transform(values_2)  # transform Period
-
-        # convert numpy array back to list of tuples
-        task_attributes = [tuple(x) for x in task_attributes_np]
-
-        # return normalized task attributes
-        return task_attributes
 
 
 if __name__ == "__main__":
