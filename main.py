@@ -6,16 +6,14 @@ Run this file for schedulability analysis with recurrent neural network (RNN).
 import logging  # for logging
 import time  # for measuring time
 
+import matplotlib.pyplot as plt
+import talos as ta
+
 import logging_config
 import util
 from database_interface import Database
-from ml_models import LSTM
-from params import hparams, config
-import talos as ta
 from ml_models import lstm_model
-import tensorflow as tf
-import sklearn
-import matplotlib.pyplot as plt
+from params import hparams, config, params
 
 graph = []
 
@@ -36,7 +34,7 @@ def main():
         return
 
     # load data from the database
-    train_X, train_y, test_X, test_y = mydb.load_data()
+    train_X, train_y, test_X, test_y, val_X, val_y = mydb.load_data()
 
     # save data shape
     config['time_steps'] = train_X.shape[1]
@@ -45,31 +43,24 @@ def main():
     # create dirs for checkpoints and logs
     util.create_dirs([config['checkpoint_dir'], config['tensorboard_log_dir']])
 
-    # # ----- LSTM -----
-    # # create the model
-    # lstm = LSTM(hparams, config)
-    #
-    # # train the model
-    # start_time = time.time()
-    # lstm.train(train_X, train_y)
-    # logger.info("Time elapsed for training: %f", time.time() - start_time)
-    #
-    # # evaluate the model
-    # start_time = time.time()
-    # loss, acc = lstm.evaluate(test_X, test_y)
-    # logger.info("Test loss = %f, test accuracy = %f", loss, acc)
-    # logger.info("Time elapsed for evaluation: %f", time.time() - start_time)
-
     # ----- Talos -----
-    start_t = time.time()
-    h = ta.Scan(train_X, train_y, params=hparams,
-                model=lstm_model,
-                dataset_name='lstm',
-                experiment_no='2',
-                val_split=.2,
-                grid_downsample=0.01)
-    print("Time elapsed: ", time.time() - start_t)
+    run_talos(train_X, train_y, val_X, val_y)
 
+
+def run_talos(train_X, train_y, val_X, val_y):
+    start_t = time.time()
+    h = ta.Scan(
+        x=train_X,
+        y=train_y,
+        params=hparams,
+        dataset_name='lstm',
+        experiment_no='2',
+        model=lstm_model,
+        #grid_downsample=0.1,
+        x_val=val_X,
+        y_val=val_y,
+    )
+    print("Time elapsed: ", time.time() - start_t)
 
     # use filename as input
     r = ta.Reporting('lstm_2.csv')
@@ -78,12 +69,10 @@ def main():
     r.plot_corr(metric='val_acc', color_grades=5)
 
     # a four dimensional bar grid
-    r.plot_bars(x='batch_size', y='val_acc', hue='hidden_layer_size', col='learning_rate')
+    r.plot_bars(x='num_epochs', y='val_acc', hue='batch_size', col='hidden_layer_size')
 
     # show plots
     plt.show()
-
-
 
 
 if __name__ == "__main__":
