@@ -10,25 +10,43 @@
     Configuration parameters config: a regular Python dictionary that declares other parameters
                                      necessary to configure a Keras model
 """
-import keras
 
 hparams = {
     ### TRAINING ###
-    'batch_size': [10, 100],  # size of each batch of data that is feed into the model
-    'num_epochs': [1, 10],  # number of iterations to run the dataset through the model
+    'batch_size': [100],  # size of each batch of data that is feed into the model
+    'num_epochs': (1, 200, 50),  # number of iterations to run the dataset through the model
 
     ### MODEL ###
-    'keep_prob': [1.0, 0.5],  # float between 0 and 1, fraction of the input units to drop
-    'num_cells': [1, 2, 3],  # number of LSTM cells
-    'hidden_layer_size': [9, 27, 100],
-# size of hidden dimension, 3 times the amount of element_size
-    'hidden_activation_function': ['tanh', 'relu', 'elu'],  # activation function to use; if you pass None, no
+    # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
+    'num_cells': [1],  # number of LSTM cells
+    'hidden_layer_size': [9],
+    # size of hidden dimension, 3 times the amount of element_size
+    # 'hidden_activation_function': ['tanh'],  # activation function to use; if you pass None, no
     # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
 
     ### COMPILE ###
-    'optimizer': [keras.optimizers.Adam, keras.optimizers.RMSprop, keras.optimizers.Nadam],  # String (name of optimizer) or optimizer instance
-    'learning_rate': (0.0001, 0.5, 10),  # float >= 0, learning rate
+    # 'optimizer': [keras.optimizers.Adam],  # String (name of optimizer) or optimizer instance
+    # 'learning_rate': [0.0001],  # float >= 0, learning rate
 }
+
+params = {
+    ### TRAINING ###
+    'batch_size': 32,  # size of each batch of data that is feed into the model
+    'num_epochs': 10,  # number of iterations to run the dataset through the model
+
+    ### MODEL ###
+    # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
+    'num_cells': 1,  # number of LSTM cells
+    'hidden_layer_size': 27,
+    # size of hidden dimension, 3 times the amount of element_size
+    # 'hidden_activation_function': ['tanh'],  # activation function to use; if you pass None, no
+    # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
+
+    ### COMPILE ###
+    # 'optimizer': [keras.optimizers.Adam],  # String (name of optimizer) or optimizer instance
+    # 'learning_rate': [0.0001],  # float >= 0, learning rate
+}
+
 
 config = {
     ### CALLBACKS ###
@@ -43,9 +61,8 @@ config = {
     # to save the log files to be parsed by Tensorflow
 
     ### TRAINING ###
-    'verbose_training': 0,  # Integer, 0, 1, or 2; verbosity mode, 0 = silent, 1 = progress bar,
+    'verbose_training': 2,  # Integer, 0, 1, or 2; verbosity mode, 0 = silent, 1 = progress bar,
     # 2 = one line per epoch (default: 1)
-    'validation_split': 0.25,  # fraction of the training data to be used as validation data
 
     ### EVALUATION ###
     'verbose_eval': 0,  # 0 or 1, verbosity mode, 0 = silent, 1 = progress bar
