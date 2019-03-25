@@ -14,6 +14,7 @@ import util
 from database_interface import Database
 from ml_models import lstm_model
 from params import hparams, config, params
+import csv
 
 graph = []
 
@@ -45,6 +46,8 @@ def main():
 
     # ----- Talos -----
     run_talos(train_X, train_y, val_X, val_y)
+    do_plotting()
+    #plot()
 
 
 def run_talos(train_X, train_y, val_X, val_y):
@@ -54,13 +57,15 @@ def run_talos(train_X, train_y, val_X, val_y):
         y=train_y,
         params=hparams,
         dataset_name='lstm',
-        experiment_no='2',
+        experiment_no='3',
         model=lstm_model,
         #grid_downsample=0.1,
         x_val=val_X,
         y_val=val_y,
     )
     print("Time elapsed: ", time.time() - start_t)
+
+def do_plotting():
 
     # use filename as input
     r = ta.Reporting('lstm_2.csv')
@@ -72,6 +77,24 @@ def run_talos(train_X, train_y, val_X, val_y):
     r.plot_bars(x='num_epochs', y='val_acc', hue='batch_size', col='hidden_layer_size')
 
     # show plots
+    plt.show()
+
+def plot():
+    x = []
+    y = []
+
+    with open('lstm_2.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=',')
+        header = next(plots)
+        for row in plots:
+            x.append(int(row[6]))
+            y.append(float(row[2]))
+
+    plt.plot(x, y, 'o')
+    plt.plot([0, 200], [0.9275, 0.9275], 'r')
+    plt.xlabel('epochs')
+    plt.ylabel('val_acc')
+    plt.axis([0, 200, 0.8, 1])
     plt.show()
 
 

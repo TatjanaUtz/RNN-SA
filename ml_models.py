@@ -556,7 +556,19 @@ def _init_callbacks(params, config):
             )
         )
 
-    # TODO: create EarlyStopping: stop training when a monitored quantity has stopped improving
+    if config['use_earlystopping']:
+        # create EarlyStopping: stop training when a monitored quantity has stopped improving
+        callbacks.append(
+            keras.callbacks.EarlyStopping(
+                monitor='val_loss', # quantity to be monitored
+                # minimum change in the monitored quantity to qualify as an improvement, i.e. an
+                # absolute change of less than min_delta, will count as no improvement (default: 0)
+                min_delta=0,
+                # number of epochs with no improvement after which training will be stopped
+                # (default: 0)
+                patience=2,
+            )
+        )
 
     if config['use_tensorboard']:
         # create TensorBoard: TensorBoard basic visualization, writes a log for TensorBoard

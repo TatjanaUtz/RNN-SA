@@ -55,8 +55,11 @@ config = {
     'checkpoint_dir': ".\\experiments\\LSTM\\checkpoints\\",  # path to save the model file
     'checkpoint_verbose': 1,  # verbosity mode, 0 or 1 (default: 0)
 
+    # EarlyStopping: stop training when a monitored quantity has stopped improving
+    'use_earlystopping': True,  # whether to use the EarlyStopping callback
+
     # TensorBoard: TensorBoard visualization
-    'use_tensorboard': False,  # wheter to use the TensorBoard callback
+    'use_tensorboard': False,  # whether to use the TensorBoard callback
     'tensorboard_log_dir': '.\\experiments\\LSTM\\logs\\test\\',  # the path of the directory where
     # to save the log files to be parsed by Tensorflow
 
