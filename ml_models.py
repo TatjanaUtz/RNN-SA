@@ -566,7 +566,7 @@ def _init_callbacks(params, config):
                 min_delta=0,
                 # number of epochs with no improvement after which training will be stopped
                 # (default: 0)
-                patience=2,
+                patience=0,
             )
         )
 
@@ -616,6 +616,32 @@ def _init_callbacks(params, config):
             )
         )
 
-    # TODO: create ReduceLROnPlateau: reduce learning rate when a metric has stopped improving
+    if config['use_reduceLR']:
+        # create ReduceLROnPlateau: reduce learning rate when a metric has stopped improving
+        callbacks.append(
+            keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss', # quantity to be monitored (default: 'val_loss')
+                # factor by which the learning rate will be reduced. new_lr = lr * factor
+                # (default: 0.1)
+                factor=0.2,
+                # number of epochs with no improvement after which learning rate will be reduced
+                # (default: 10)
+                patience=2,
+                verbose=0,  # int, 0: quiet, 1: update messages (default: 0)
+                # one of {auto, min, max}; in min mode, lr will be reduced when the quantity
+                # monitored has stopped decreasing; in max mode it will be reduced when the quantity
+                # monitored has stopped increasing; in auto mode, the direction is automatically
+                # inferred from the name of the monitored quantity (default: 'auto')
+                mode='auto',
+                # threshold for measuring the new optimum, to only focus on significant changes
+                # (default: 0.0001)
+                min_delta=0.0001,
+                # number of epochs to wait before resuming normal operation after lr has been
+                # reduced (default: 0)
+                cooldown=0,
+                # lower bound on the learning rate (default: 0)
+                min_lr=0.0001,
+            )
+        )
 
     return callbacks

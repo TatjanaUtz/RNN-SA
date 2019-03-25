@@ -68,7 +68,7 @@ def run_talos(train_X, train_y, val_X, val_y):
 def do_plotting():
 
     # use filename as input
-    r = ta.Reporting('lstm_2.csv')
+    r = ta.Reporting('lstm_3.csv')
 
     # heatmap correlation
     r.plot_corr(metric='val_acc', color_grades=5)
