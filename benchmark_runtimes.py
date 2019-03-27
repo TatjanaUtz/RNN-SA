@@ -11,8 +11,11 @@ import database_interface
 def benchmark_runtimes(database):
     """ Benchmark test to get execution times of tasks.
 
-    Reads all jobs of all tasks from the database and calculates the minimum, maximum and average
-    execution time of each task defined by PKG and for each combination of PKG and arg.
+    Reads all jobs of all tasks from the database and calculates the average execution time of each
+    task defined by PKG and for each combination of PKG and Arg.
+
+    Args:
+    database -- the database object
     """
     # create logger
     logger = logging.getLogger('RNN-SA.benchmark_runtimes.benchmark_runtimes')
@@ -52,13 +55,11 @@ def benchmark_runtimes(database):
     # iterate over all dictionary keys
     for key in task_dict:
         if task_dict[key]:  # at least one execution time was found
-            min_c = min(task_dict[key])  # calculate minimum execution time
-            max_c = max(task_dict[key])  # calculate maximum execution time
-            average_c = sum(task_dict[key]) / len(
-                task_dict[key])  # calculate average execution time
+            # calculate average execution time
+            average_c = sum(task_dict[key]) / len(task_dict[key])
 
-            # save calculated values
-            task_dict[key] = (min_c, max_c, average_c)
+            # save calculated value
+            task_dict[key] = average_c
         else:  # no execution time was found: delete key from dictionary
             delete_keys.append(key)
 
@@ -66,12 +67,12 @@ def benchmark_runtimes(database):
     for key in delete_keys:
         del task_dict[key]
 
-    logger.debug("Saving calculated execution times to database...")
+    logger.info("Saving calculated execution times to database...")
 
     # save execution times to database
     database.write_execution_time(task_dict)
 
-    logger.debug("Saving successful! Benchmark finished!")
+    logger.info("Saving successful! Benchmark finished!")
 
 def _calculate_executiontimes(job_attributes):
     """Calculate the executiontimes of jobs.

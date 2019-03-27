@@ -88,7 +88,7 @@ class Database():
         """Constructor of class Database."""
         # path to the database = current directory
         # self.db_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_dir = 'C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA'
+        self.db_dir = "C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA"
         self.db_name = 'panda_v2.db'  # name of the database with .db extension
 
         self.db_connection = None  # connection to the database
@@ -176,8 +176,8 @@ class Database():
         if not self.check_if_table_exists('TaskSet'):  # table TaskSet does not exist
             return False, 'TaskSet'
 
-        # Check table ExecutionTimes
-        if not self.check_if_table_exists('ExecutionTimes'):
+        # Check table ExecutionTime
+        if not self.check_if_table_exists('ExecutionTime'):
             # table ExecutionTimes does not exist: create it through benchmark
             benchmark_runtimes(self)
 
@@ -218,9 +218,6 @@ class Database():
         # at least one row was fetched - table exists
         self._close_db()  # close database
         return True
-
-
-
 
     def read_table_correcttaskset(self):
         """Read the table CorrectTaskSet.
@@ -271,8 +268,8 @@ class Database():
         logger = logging.getLogger("RNN-SA.database.read_execution_times")
 
         self._open_db()  # open database
-        # read all average execution times
-        self.db_cursor.execute("SELECT [PKG(Arg)], [Average_C] FROM ExecutionTimes")
+        # read all execution times
+        self.db_cursor.execute("SELECT [PKG(Arg)], [Average_C] FROM ExecutionTime")
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
 
@@ -448,22 +445,19 @@ class Database():
         self._close_db()  # close database
 
     def write_execution_time(self, task_dict):
-        """Write a tuple of execution times (min, max, average) to the database.
+        """Write the execution times to the database.
 
         Args:
-            task_dict -- dictionary with all task execution times (= tuple of execution times
-                         (min, max, average))
+            task_dict -- dictionary with all task execution times
         """
         # create logger
         logger = logging.getLogger('RNN-SA.database_interface.write_execution_time')
 
         self._open_db()  # open database
 
-        # create table CorrectTaskSet if it does not exist
-        create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTimes (" \
+        # create table ExecutionTime if it does not exist
+        create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTime (" \
                            "[PKG(Arg)] TEXT, " \
-                           "[Min_C] INTEGER, " \
-                           "[Max_C] INTEGER, " \
                            "Average_C INTEGER, " \
                            "PRIMARY KEY([PKG(Arg)])" \
                            ");"
@@ -473,24 +467,20 @@ class Database():
             logger.error(sqle)
 
         # sql statement for inserting or replacing a row in the ExecutionTime table
-        insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTimes" \
-                                "([PKG(Arg)], Min_C, Max_C, Average_C)" \
-                                " VALUES(?, ?, ?, ?)"
+        insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTime" \
+                                "([PKG(Arg)], Average_C)" \
+                                " VALUES(?, ?)"
 
         # iterate over all keys
         for key in task_dict:
             if isinstance(key, str):  # key = (PKG)
                 # insert or replace task-set
-                self.db_cursor.execute(insert_or_replace_sql,
-                                       (key, task_dict[key][0], task_dict[key][1],
-                                        task_dict[key][2]))
+                self.db_cursor.execute(insert_or_replace_sql, (key, task_dict[key]))
             elif len(key) == 2:  # key = PKG(Arg)
-                self.db_cursor.execute(insert_or_replace_sql, (
-                    key[0] + "(" + str(key[1]) + ")", task_dict[key][0], task_dict[key][1],
-                    task_dict[key][2]))
+                self.db_cursor.execute(insert_or_replace_sql,
+                                       (key[0] + "(" + str(key[1]) + ")", task_dict[key]))
 
-        # save (commit) changes
-        self.db_connection.commit()
+        self.db_connection.commit()         # save (commit) changes
         self._close_db()  # close database
 
     def load_data(self):
