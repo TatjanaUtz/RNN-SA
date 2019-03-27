@@ -92,7 +92,3 @@ def log_results(name, res, hyperparams=None):
     for key in res:  # loop over all results
         logger.info("%s: %f", key, res[key])
     logger.info("%s \n", "-" * len(title_string))
-
-
-if __name__ == "__main__":
-    print("Main function of logging_config.py")

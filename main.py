@@ -57,7 +57,7 @@ def run_talos(train_X, train_y, val_X, val_y):
         y=train_y,
         params=hparams,
         dataset_name='lstm',
-        experiment_no='3',
+        experiment_no='4',
         model=lstm_model,
         #grid_downsample=0.1,
         x_val=val_X,
@@ -68,13 +68,13 @@ def run_talos(train_X, train_y, val_X, val_y):
 def do_plotting():
 
     # use filename as input
-    r = ta.Reporting('lstm_3.csv')
+    r = ta.Reporting('lstm_4.csv')
 
     # heatmap correlation
     r.plot_corr(metric='val_acc', color_grades=5)
 
     # a four dimensional bar grid
-    r.plot_bars(x='num_epochs', y='val_acc', hue='batch_size', col='hidden_layer_size')
+    r.plot_bars(x='batch_size', y='val_acc', hue='num_cells', col='hidden_layer_size')
 
     # show plots
     plt.show()

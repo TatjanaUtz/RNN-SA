@@ -156,6 +156,7 @@ class Database():
             Job
             Task
             TaskSet
+            ExecutionTimes
             CorrectTaskSet
         If a table does not exist in the database, it is created (if possible).
 
@@ -217,6 +218,9 @@ class Database():
         # at least one row was fetched - table exists
         self._close_db()  # close database
         return True
+
+
+
 
     def read_table_correcttaskset(self):
         """Read the table CorrectTaskSet.
@@ -335,15 +339,15 @@ class Database():
     def read_table_task(self, preprocessing=False):
         """Read the table Task.
 
-        Read all rows and columns from the table Task and save the task attributes as a dictionary
-        with    key = Task_ID
-                value = (Priority, Deadline, Quota, CAPS, PKG, Arg, CORES, COREOFFSET, CRITICALTIME,
-                         Period, Number_of_Jobs, OFFSET).
+        Read all rows and columns from the table Task and save the task attributes as an array with
+            row index = Task_ID
+            row content = [Priority, Deadline, Quota, CAPS, PKG, Arg, CORES, COREOFFSET, CRITICALTIME,
+                         Period, Number_of_Jobs, OFFSET].
 
         Args:
-            preprocessing -- boolean, wether preprocessing should be done or not, default: False
+            preprocessing -- boolean, whether preprocessing should be done or not, default: False
         Return:
-            task_attributes -- dictionary with the task attributes
+            task_attributes -- array with the task attributes
         """
         # create logger
         logger = logging.getLogger("RNN-SA.database.read_table_task")
