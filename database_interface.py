@@ -5,40 +5,14 @@ and formatting data into a format usable with tensorflow.
 """
 
 import logging
-import os  # for current directory dir
-import sqlite3  # for working with the database
-from random import shuffle  # for shuffle of the task-sets
+import os
+import sqlite3
 
-import numpy as np  # for arrays
-import sklearn  # for data preprocessing (normalization)
-from sklearn.model_selection import train_test_split
-from tensorflow import keras
-
-from benchmark_runtimes import benchmark_runtimes
+from benchmark import benchmark_execution_times
 from database_filter import filter_database
-from logging_config import init_logging
-
-# task attributes that should be used for classifying task-sets
-USE_FEATURES = ['Priority', 'PKG', 'Arg', 'CRITICALTIME', 'Period', 'Number_of_Jobs']
-
-# one hot encoding of attribute PKG of a task
-TASK_PKG_DICT = {
-    'cond_mod': [1, 0, 0, 0],
-    'hey': [0, 1, 0, 0],
-    'pi': [0, 0, 1, 0],
-    'tumatmul': [0, 0, 0, 1]
-}
-
-# default indices of all task attributes (column indices of 'Task' without Task_ID)
-DEFAULT_FEATURES = ['Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES', 'COREOFFSET',
-                    'CRITICALTIME', 'Period', 'Number_of_Jobs', 'OFFSET']
-
-TASK_ATTRIBUTES = "Task_ID, Priority, PKG, Arg, CRITICALTIME, Period, Number_of_Jobs"
-NUM_TASK_ATTRIBUTES = 6
-NUM_TASK_PKGS = 4
 
 # default task execution times
-EXECUTION_TIME_DICT = {
+DEFAULT_EXECUTION_TIMES = {
     ("hey", 0): 1045,
     ("hey", 1000): 1094,
     ("hey", 1000000): 1071,
@@ -82,72 +56,51 @@ class Database():
     The database is defined by the following attributes:
         db_dir -- path to the database file (*.db)
         db_name -- name of the database file (incl. .db)
+    Additional attributes of a Database object are:
+        db_connection -- connection to the database
+        db_cursor -- cursor for working with the database
+        execution_time_dict -- dictionary with the execution times of the tasks
     """
 
+    # TODO: identisch, aber execution time nur wenn filter
     def __init__(self):
         """Constructor of class Database."""
-        # path to the database = current directory
-        # self.db_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_dir = "C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA"
-        self.db_name = 'panda_v2.db'  # name of the database with .db extension
 
+        self.db_dir = "C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA"  # path to the database
+        self.db_name = 'panda_v2.db'  # name of the database
         self.db_connection = None  # connection to the database
-        self.db_cursor = None  # cursor to work with the database
+        self.db_cursor = None  # cursor for working with the database
 
-        # check if database exists
-        if not self.check_if_database_exists():
-            # database does not exist at the defined path
-            raise Exception("database '{}' not found in {}".format(self.db_name, self.db_dir))
+        # initalize execution times with default values
+        self.execution_time_dict = DEFAULT_EXECUTION_TIMES
 
-        # check database: check if all necessary tables exist
-        check_value, table_name = self.check_database()
-        if not check_value:
-            # something is not correct with the database: at least one table is missing
-            raise Exception("no such table: " + table_name)
+        # check that database exists
+        self._check_if_database_exists()
 
-    def _open_db(self):
-        """Open the database.
+        # check the database: check if all necessary tables exist
+        self._check_database()
 
-        This methods opens the database defined by self.db_dir and self.db_name by creating a
-        database connection and a cursor.
-        """
-        # create full path to the database
-        db_path = self.db_dir + "\\" + self.db_name
+        # read table 'ExecutionTime': update execution times
+        self.execution_time_dict = self.read_table_executiontime()
 
-        # create database connection and a cursor
-        self.db_connection = sqlite3.connect(db_path)
-        self.db_cursor = self.db_connection.cursor()
+    #############################
+    # check database and tables #
+    #############################
 
-    def _close_db(self):
-        """Close the database.
-
-        This method commits the changes to the database and closes it by closing and deleting the
-        database connection and the cursor.
-        """
-        # commit changes and close connection to the database
-        self.db_connection.commit()
-        self.db_connection.close()
-
-        # delete database connection and cursor
-        self.db_connection = None
-        self.db_cursor = None
-
+    # TODO: identisch
     def check_if_database_exists(self):
         """Check if the database file exists.
 
-        This method checks if the database defined by self.db_dir and self.db_name exists.
-
-        Return:
-            True/False -- whether the database exists
+        This method checks if the database defined by self.db_dir and self.db_name exists. If not,
+        an exception is raise.
         """
-        # create full path to database
-        db_path = self.db_dir + "\\" + self.db_name
+        db_path = self.db_dir + "\\" + self.db_name  # create full path to database
 
-        # Check if database exists
-        if os.path.exists(db_path):  # database exists
-            return True
-        return False
+        # check if database exists
+        if not os.path.exists(db_path):  # database doesn't exists: raise exception
+            raise Exception("database '%s' not found in %s", self.db_name, self.db_dir)
 
+    # TODO: fast identisch - Tabelle CorrectTaskSet
     def check_database(self):
         """Check the database.
 
@@ -156,39 +109,44 @@ class Database():
             Job
             Task
             TaskSet
-            ExecutionTimes
-            CorrectTaskSet
-        If a table does not exist in the database, it is created (if possible).
-
-        Return:
-            True/False -- whether all necessary tables exist
-            the name of the table which doesn't exist in the database
+            ExecutionTime.
+        If a table does not exist in the database, it is created (if possible) or an Exception is
+        raised.
         """
-        # Check table Job
-        if not self.check_if_table_exists('Job'):  # table Job does not exist
-            return False, 'Job'
+        # check table Job
+        if not self._check_if_table_exists('Job'):  # table Job does not exist
+            raise Exception("no such table: %s", 'Job')
 
-        # Check table Task
-        if not self.check_if_table_exists('Task'):  # table Task does not exist
-            return False, 'Task'
+        # check table Task
+        if not self._check_if_table_exists('Task'):  # table Task does not exist
+            raise Exception("no such table: %s", 'Task')
 
         # check table TaskSet
-        if not self.check_if_table_exists('TaskSet'):  # table TaskSet does not exist
-            return False, 'TaskSet'
+        if not self._check_if_table_exists('TaskSet'):  # table TaskSet does not exist
+            raise Exception("no such table: %s", 'TaslSet')
 
-        # Check table ExecutionTime
-        if not self.check_if_table_exists('ExecutionTime'):
-            # table ExecutionTimes does not exist: create it through benchmark
-            benchmark_runtimes(self)
+        # check table ExecutionTime
+        if not self._check_if_table_exists('ExecutionTime'):
+            # table ExecutionTime does not exist: create it through benchmark
+            benchmark_execution_times(self)
+
+            # check that table was successfully created
+            if not self._check_if_table_exists('ExecutionTime'):  # something went wrong
+                raise Exception("nos such table %s - creation not possible", 'ExecutionTime')
 
         # check table CorrectTaskSet
-        if not self.check_if_table_exists('CorrectTaskSet'):  # table CorrectTaskSet does not exist
-            # Create table CorrectTaskSet
+        if not self.check_if_table_exists('CorrectTaskSet'):
+            # table CorrectTaskSet does not exist: create it through filter
             filter_database(self)
+
+            # check that table was successfully created
+            if not self._check_if_table_exists('CorrectTaskSet'):  # something went wrong
+                raise Exception("nos such table %s - creation not possible", 'CorrectTaskSet')
 
         # all tables exist
         return True, None
 
+    # TODO: identisch
     def check_if_table_exists(self, table_name):
         """Check if a table exists in the database.
 
@@ -208,16 +166,174 @@ class Database():
                     "WHERE type = 'table' AND name = '{}'".format(table_name)
         self.db_cursor.execute(sql_query)
 
-        # fetch all rows
-        rows = self.db_cursor.fetchall()
+        rows = self.db_cursor.fetchall()  # fetch all rows
+        self._close_db()  # close database
 
         if not rows:  # no row could be fetched - table doesn't exist
-            self._close_db()  # close database
             return False
 
         # at least one row was fetched - table exists
-        self._close_db()  # close database
         return True
+
+    #########################
+    # open / close database #
+    #########################
+
+    # TODO: identisch
+    def _open_db(self):
+        """Open the database.
+
+        This methods opens the database defined by self.db_dir and self.db_name by creating a
+        database connection and a cursor.
+        """
+        db_path = self.db_dir + "\\" + self.db_name  # create full path to the database
+
+        # create database connection and a cursor
+        self.db_connection = sqlite3.connect(db_path)
+        self.db_cursor = self.db_connection.cursor()
+
+    # TODO: identisch
+    def _close_db(self):
+        """Close the database.
+
+        This method commits the changes to the database and closes it by closing and deleting the
+        database connection and the cursor.
+        """
+        # commit changes and close connection to the database
+        self.db_connection.commit()
+        self.db_connection.close()
+
+        # delete database connection and cursor
+        self.db_connection = None
+        self.db_cursor = None
+
+    #######################
+    # read / write tables #
+    #######################
+
+    # TODO: identisch
+    def read_table_job(self, task_id=None, exit_value=None):
+        """Read the table Job.
+
+        This method reads the table Job of the database. If task_id is not specified, the hole table
+        is read. If task_id is specified, only the jobs of the task defined by task_id are read.
+        If exit_value is specified, only the jobs with this exit_value are read.
+
+        Args:
+            task_id -- ID of the task which jobs should be read
+            exit_value -- exit_value of the jobs that should be read
+        Return:
+            rows -- list with the job attributes
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_table_job")
+
+        self._open_db()  # open database
+
+        if task_id is not None and exit_value is not None:
+            # read all jobs of task_id with exit_value
+            self.db_cursor.execute("SELECT * FROM Job WHERE Task_ID = ? AND Exit_Value = ?",
+                                   (task_id, exit_value))
+        else:  # read all jobs
+            self.db_cursor.execute("SELECT * FROM Job")
+
+        rows = self.db_cursor.fetchall()
+        self._close_db()  # close database
+
+        return rows
+
+    # TODO: fast identisch: dictionary
+    def read_table_task(self, task_id=None):
+        """Read the table Task.
+
+        This method reads the table Task of the database. If task_id is not specified, the hole
+        table is read. If task_id is specified, only the task defined by task_id is read.
+
+        Args:
+            task_id -- ID of the task which should be read
+            dict -- whether the tasks should be returned as list or dictionary
+        Return:
+            rows -- list with the task attributes
+            task_dict -- dictionary of the task attributes (key = task ID, value = Task-object)
+        """
+        # create logger
+        logger = logging.getLogger("RNN-SA.database.read_table_task")
+
+        self._open_db()  # open database
+
+        if task_id is not None:  # read task with task_id
+            self.db_cursor.execute("SELECT * FROM Task WHERE Task_ID = ?", (task_id,))
+        else:  # read all tasks
+            self.db_cursor.execute("SELECT * FROM Task")
+
+        rows = self.db_cursor.fetchall()
+        self._close_db()  # close database
+
+        return rows
+
+    # TODO: noch nicht identisch
+    def read_table_taskset(self):
+        """Read the table TaskSet.
+
+        Read all rows of table TaskSet and split the table in labels and a task-set containing the
+        task IDs.
+
+        Return:
+            tasksets -- list of task-sets containing the task IDs
+            labels -- the labels, i.e. the schedulability of the task-sets
+        """
+        # create logger
+        logger = logging.getLogger('RNN-SA.database_interface.read_table_taskset')
+
+        self._open_db()  # open database
+        # read all task-sets
+        self.db_cursor.execute("SELECT * FROM TaskSet")
+        rows = self.db_cursor.fetchall()
+        self._close_db()  # close database
+
+        if not rows:  # no task-set read
+            logger.debug("No task-set read!")
+            return None
+
+        # limit number of rows
+        # rows = rows[:10]
+
+        # split taskset IDs, task-sets and labels
+        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
+        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
+        labels = [x[1] for x in rows]  # list with corresponding labels
+
+        return taskset_ids, tasksets, labels
+
+    # TODO: identisch
+    def read_table_executiontime(self, dict=True):
+        """Read the table ExecutionTime.
+
+        This method reads the table ExecutionTime. The hole table is read, i.e. all rows.
+
+        Args:
+            dict -- whether the execution times should be returned as list or dictionary
+
+        Return:
+            execution_times -- list with the execution times
+            c_dict -- dictionary of the execution times (key = PKG or (PKG, Arg), value = execution
+                      time)
+        """
+        # create logger
+        logger = logging.getLogger('traditional-SA.database.read_table_executiontime')
+
+        self._open_db()  # open database
+
+        # read all execution times
+        self.db_cursor.execute("SELECT * FROM ExecutionTime")
+        rows = self.db_cursor.fetchall()
+        self._close_db()  # close database
+
+        if dict:  # convert execution times to dictionary
+            c_dict = self._convert_to_executiontime_dict(rows)
+            return c_dict
+
+        return rows
 
     def read_table_correcttaskset(self):
         """Read the table CorrectTaskSet.
@@ -253,153 +369,44 @@ class Database():
 
         return taskset_ids, tasksets, labels
 
-    def read_table_executiontimes(self):
-        """Read table ExecutionTimes.
-
-        Read all rows of the table ExecutionTimes and save the columns PKG(Arg) and Average_C as
-        a dictionary with
-            key = PKG(Arg)
-            value = Average_C.
-
-        Return:
-            execution_times -- dictionary with execution times
-        """
-        # create logger
-        logger = logging.getLogger("RNN-SA.database.read_execution_times")
-
-        self._open_db()  # open database
-        # read all execution times
-        self.db_cursor.execute("SELECT [PKG(Arg)], [Average_C] FROM ExecutionTime")
-        rows = self.db_cursor.fetchall()
-        self._close_db()  # close database
-
-        # check if execution times where found
-        if not rows:  # now row was read
-            logger.error("Table ExecutionTimes does not exist or is empty!")
-
-        # create dictionary with default execution times
-        execution_times = EXECUTION_TIME_DICT
-
-        # update execution time dictionary
-        for row in rows:  # iterate over all rows
-            # get data from row
-            pkg_arg = row[0]
-            average_c = row[1]
-
-            # split pkg and arg and create dictionary entry
-            if '(' in pkg_arg:  # string contains pkg and arg
-                pkg, arg = pkg_arg.split('(')
-                arg = int(arg[:-1])  # delete last character = ')' and format to int
-                dict_entry = {(pkg, arg): average_c}
-            else:  # string contains only pkg, no arg
-                pkg = pkg_arg
-                dict_entry = {pkg: average_c}
-
-            # update dictionary
-            execution_times.update(dict_entry)
-
-        return execution_times
-
-    def read_table_taskset(self):
-        """Read the table TaskSet.
-
-        Read all rows of table TaskSet and split the table in labels and a task-set containing the
-        task IDs.
-
-        Return:
-            tasksets -- list of task-sets containing the task IDs
-            labels -- the labels, i.e. the schedulability of the task-sets
-        """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database_interface.read_table_taskset')
-
-        self._open_db()  # open database
-        # read all task-sets
-        self.db_cursor.execute("SELECT * FROM TaskSet")
-        rows = self.db_cursor.fetchall()
-        self._close_db()  # close database
-
-        if not rows:  # no task-set read
-            logger.debug("No task-set read!")
-            return None
-
-        # limit number of rows
-        # rows = rows[:10]
-
-        # split taskset IDs, task-sets and labels
-        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
-        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
-        labels = [x[1] for x in rows]  # list with corresponding labels
-
-        return taskset_ids, tasksets, labels
-
-    def read_table_task(self, preprocessing=False):
-        """Read the table Task.
-
-        Read all rows and columns from the table Task and save the task attributes as an array with
-            row index = Task_ID
-            row content = [Priority, Deadline, Quota, CAPS, PKG, Arg, CORES, COREOFFSET, CRITICALTIME,
-                         Period, Number_of_Jobs, OFFSET].
+    # TODO: identisch
+    def write_execution_time(self, c_dict):
+        """Write the execution times to the database.
 
         Args:
-            preprocessing -- boolean, whether preprocessing should be done or not, default: False
-        Return:
-            task_attributes -- array with the task attributes
+            task_dict -- dictionary with all task execution times
         """
         # create logger
-        logger = logging.getLogger("RNN-SA.database.read_table_task")
-
-        self._open_db()  # open database
-        # read all tasks
-        self.db_cursor.execute("SELECT * FROM Task ORDER BY Task_ID ASC")
-        rows = self.db_cursor.fetchall()
-        self._close_db()  # close database
-
-        if not rows:  # no task read
-            logger.debug("No task read!")
-            return None
-
-        # do data preprocessing
-        if preprocessing:
-            task_attributes = self._preprocess_tasks(rows)
-        else:
-            task_attributes = rows
-
-        return task_attributes
-
-    def read_table_job(self, task_id=None, exit_value=None):
-        """Read the table Job.
-
-        This method reads the table Job of the database. If task_id is not specified, the hole table
-        is read. If task_id is specified, only the jobs of the task defined by task_id are read.
-        If exit_value is specified, only the jobs with this exit_value are read.
-
-        Args:
-            task_id -- ID of the task which jobs should be read
-            exit_value -- exit_value of the jobs that should be read
-        Return:
-            rows -- list with the job attributes
-        """
-        # create logger
-        logger = logging.getLogger("RNN-SA.database.read_table_job")
+        logger = logging.getLogger('RNN-SA.database_interface.write_execution_time')
 
         self._open_db()  # open database
 
-        if task_id is not None and exit_value is not None:
-            # read all jobs of task_id with exit_value
-            self.db_cursor.execute("SELECT * FROM Job WHERE Task_ID = ? AND Exit_Value = ?",
-                                   (task_id, exit_value))
-        else:  # read all jobs
-            self.db_cursor.execute("SELECT * FROM Job")
+        # create table ExecutionTime if it does not exist
+        create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTime (" \
+                           "[PKG(Arg)] TEXT, " \
+                           "Average_C INTEGER, " \
+                           "PRIMARY KEY([PKG(Arg)])" \
+                           ");"
+        try:
+            self.db_cursor.execute(create_table_sql)
+        except sqlite3.Error as sqle:
+            logger.error(sqle)
 
-        rows = self.db_cursor.fetchall()  # fetch all rows
+        # sql statement for inserting or replacing a row in the ExecutionTime table
+        insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTime" \
+                                "([PKG(Arg)], Average_C)" \
+                                " VALUES(?, ?)"
+
+        # iterate over all keys
+        for key in c_dict:
+            if isinstance(key, str):  # key = (PKG)
+                # insert or replace task-set
+                self.db_cursor.execute(insert_or_replace_sql, (key, c_dict[key]))
+            elif len(key) == 2:  # key = PKG(Arg)
+                self.db_cursor.execute(insert_or_replace_sql,
+                                       (key[0] + "(" + str(key[1]) + ")", c_dict[key]))
+
         self._close_db()  # close database
-
-        if not rows:  # no job read
-            logger.debug("No job read!")
-            return None
-
-        return rows
 
     def write_correct_taskset(self, taskset_id, taskset, label):
         """Write a task-set to the table CorrectTaskSet.
@@ -444,166 +451,77 @@ class Database():
 
         self._close_db()  # close database
 
-    def write_execution_time(self, task_dict):
-        """Write the execution times to the database.
+    ##############
+    # conversion #
+    ##############
+
+    # TODO: identisch
+    def _convert_to_task_dict(self, task_attributes):
+        """Convert a list of task attributes to a dictionary of Task-objects.
+
+        This function converts a list of task attributes to a dictionary with
+            key = task ID
+            value = object of type Task.
 
         Args:
-            task_dict -- dictionary with all task execution times
-        """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database_interface.write_execution_time')
-
-        self._open_db()  # open database
-
-        # create table ExecutionTime if it does not exist
-        create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTime (" \
-                           "[PKG(Arg)] TEXT, " \
-                           "Average_C INTEGER, " \
-                           "PRIMARY KEY([PKG(Arg)])" \
-                           ");"
-        try:
-            self.db_cursor.execute(create_table_sql)
-        except sqlite3.Error as sqle:
-            logger.error(sqle)
-
-        # sql statement for inserting or replacing a row in the ExecutionTime table
-        insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTime" \
-                                "([PKG(Arg)], Average_C)" \
-                                " VALUES(?, ?)"
-
-        # iterate over all keys
-        for key in task_dict:
-            if isinstance(key, str):  # key = (PKG)
-                # insert or replace task-set
-                self.db_cursor.execute(insert_or_replace_sql, (key, task_dict[key]))
-            elif len(key) == 2:  # key = PKG(Arg)
-                self.db_cursor.execute(insert_or_replace_sql,
-                                       (key[0] + "(" + str(key[1]) + ")", task_dict[key]))
-
-        self.db_connection.commit()         # save (commit) changes
-        self._close_db()  # close database
-
-    def load_data(self):
-        """Load the data from the database.
-
+            task_attributes -- list with pure task attributes
         Return:
-            train_X -- array with task-sets for training
-            train_y -- vector with labels for training
-            test_X -- array with task-sets for test
-            test_y -- vector with labels for test
+            task_dict -- dictionary with Task-objects
         """
-        # read table 'CorrectTaskSet'
-        _, tasksets, labels = self.read_table_correcttaskset()
+        task_dict = dict()  # create empty dictionary for tasks
 
-        # shuffle tasksets and labels in unisono
-        data = list(zip(tasksets, labels))
-        shuffle(data)
-        tasksets, labels = zip(*data)
+        for row in task_attributes:  # iterate over all task attribute rows
+            # get execution time of task depending on PKG and Arg
+            pkg = row[5]
+            arg = row[6]
+            if (pkg, arg) in self.execution_time_dict:  # (PKG, Arg)
+                execution_time = self.execution_time_dict[(pkg, arg)]
+            else:  # (PKG)
+                execution_time = self.execution_time_dict[pkg]
 
-        # convert tuple to list
-        tasksets = list(tasksets)
+            # create new task
+            new_task = Task(task_id=row[0], priority=row[1], pkg=row[5], arg=row[6],
+                            deadline=row[9], period=row[10], number_of_jobs=row[11],
+                            execution_time=execution_time)
 
-        # read table 'Task'
-        task_attributes = self.read_table_task(preprocessing=True)
+            # add task to dictionary
+            task_dict[row[0]] = new_task
 
-        # replace task IDs with the corresponding task attributes
-        for i, taskset in enumerate(tasksets):  # iterate over all samples
-            # convert tuple to list
-            taskset = list(taskset)
+        return task_dict
 
-            # delete all tasks with Task_ID = -1
-            while taskset.count(-1) > 0:
-                taskset.remove(-1)
+    # TODO: identisch
+    def _convert_to_executiontime_dict(self, execution_times):
+        """Convert a list of execution times to a dictionary.
 
-            # replace Task_ID with task attributes
-            for j, task_id in enumerate(taskset):  # iterate over all task IDs
-                taskset[j] = task_attributes[task_id]
-
-            # replace taskset in tasksets
-            tasksets[i] = taskset
-
-        # convert lists to numpy arrays
-        tasksets_np = np.asarray(tasksets)
-        labels_np = np.asarray(labels, np.int32)
-
-        # pad sequences to uniform length
-        tasksets_np = keras.preprocessing.sequence.pad_sequences(
-            sequences=tasksets_np,  # list of lists, where each element is a sequence
-            maxlen=None,  # Int, maximum length of all sequences (default: None)
-            # Type of the output sequences, to pad sequences with variable length string you can use
-            # object (default: 'int32')
-            dtype=list,
-            # String, 'pre' or 'post': pad either before or after each sequence (default: 'pre')
-            padding='post',
-            # String, 'pre' or 'post': remove values from sequences larger than  maxlen, either at
-            # the beginning or at the end of the sequences (default: 'pre')
-            truncating='pre',
-            value=0.0  # Float or String, padding value (default: 0.0)
-        )
-
-        # split data into training and test/val: 80% training data, 20% test/validation data
-        train_X, test_val_X, train_y, test_val_y = train_test_split(tasksets_np, labels_np, test_size=0.2)
-
-        # split test/val in test and validation data: 50% data each
-        test_X, val_X, test_y, val_y = sklearn.model_selection.train_test_split(test_val_X, test_val_y, test_size=0.5)
-
-        # return task-sets and labels
-        return train_X, train_y, test_X, test_y, val_X, val_y
-
-    def _preprocess_tasks(self, task_attributes):
-        """Preprocess the tasks.
-
-        This function preprocessed the task attributes for machine learning.
-        First all unused features are deleted. Then all non-numeric values are one hot encoded.
-        Finally the features are normalized.
+        This function converts a list of execution times to a dictionary with
+            key = PKG or (PKG, Arg)
+            value = execution time.
 
         Args:
-            task_attributes -- dictionary with all tasks and their attributes
+            execution_times -- list with pure execution times
+        Return:
+            c_dict -- dictionary with execution times
         """
-        # --- delete unused features ---
-        # filter features: only use features defined by USE_FEATURES
-        task_attributes = [x[1:] for x in task_attributes]  # delete task ID
-        features = DEFAULT_FEATURES  # get default features
+        # create dictionary with default execution times
+        c_dict = DEFAULT_EXECUTION_TIMES
 
-        # iterate over all default features beginning at the end
-        for idx, name in reversed(list(enumerate(features))):
-            if name not in USE_FEATURES:  # check if feature should be deleted
-                # delete feature
-                task_attributes = [x[:idx] + x[idx + 1:] for x in task_attributes]
+        for row in execution_times:  # iterate over all execution time rows
+            # extract identifier and execution time
+            pkg_arg = row[0]
+            average_c = row[1]
 
-        # update features
-        features = [x for x in features if x in USE_FEATURES]
+            # split pkg and arg and create new dictionary entry
+            if '(' in pkg_arg:  # string contains pkg and arg
+                pkg, arg = pkg_arg.split('(')
+                arg = int(arg[:-1])  # delete last character = ')' and format to int
+                dict_entry = {(pkg, arg): average_c}
+            else:  # string contains only pkg, no arg
+                pkg = pkg_arg
+                dict_entry = {pkg: average_c}
 
-        # --- one hot encoding ---
-        # do one hot encoding for PKG feature
-        idx = features.index('PKG')  # get index of 'PKG'
-        # replace PKG with one hot encoded
-        task_attributes = [x[:idx] + tuple(TASK_PKG_DICT[x[idx]]) + x[idx + 1:] for x in
-                           task_attributes]
+            # update dictionary
+            c_dict.update(dict_entry)
 
-        # update features
-        features = features[:idx] + ['PKG_cond_mod', 'PKG_hey', 'PKG_pi',
-                                     'PKG_tumatmul'] + features[idx + 1:]
-
-        # --- normalization ---
-        normalized = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1)).fit_transform(task_attributes)
-
-        # --- standardization ---
-        # standardized = sklearn.preprocessing.StandardScaler().fit_transform(task_attributes)
-
-        # convert numpy array back to list of tuples
-        task_attributes = [tuple(x) for x in normalized]
-
-        # return processed task attributes
-        return task_attributes
+        return c_dict
 
 
-
-if __name__ == "__main__":
-    # initialize logging
-    init_logging()
-
-    # create database
-    my_db = Database()
-    tasksets, labels = my_db.load_data()
-    print("Dummy")
