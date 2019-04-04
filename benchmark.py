@@ -1,76 +1,61 @@
-"""Module to benchmark runtimes of tasks.
-
-All successfully ran jobs from the database are read. For each task the maximum, minimum and average
-execution times are calculated and saved to the database.
-"""
+"""Module to benchmark the execution times of tasks."""
 import logging
+import time
 
-import database_interface
+import logging_config
 
 
 def benchmark_execution_times(database):
-    """Benchmark test to get average execution times of tasks.
+    """Benchmark to get average execution times of tasks.
 
-    This method reads all jobs of all tasks from the database and calculates the average execution
-    time of each task defined by PKG and for each combination of PKG and Arg.
+    This method determines for each task the task-sets, that consist only of this task. Then all
+    jobs of this task-sets and for the task are read from the database. The execution time of the
+    jobs is calculated from the start- and end-date and the average value is built upon this
+    execution times.
 
     Args:
-        database -- a database object
+        database -- a Database-object
     """
-    # create logger
     logger = logging.getLogger('traditional-SA.benchmark.benchmark_execution_times')
     logger.info("Starting to benchmark execution times...")
+    start_time = time.time()
 
-    task_list = database.read_table_task(dict=False)  # read table Task
-    c_dict = dict()  # create empty dictionary
+    task_list = database.read_table_task(convert_to_task_dict=False)  # read table 'Task'
+    c_dict = dict()  # create empty dictionary for execution times
 
     for task in task_list:  # iterate over all tasks
-        # create and add empty dictionary entry for PKG and (PKG, Arg)
-        pkg, arg = task[5], task[6]
-        if pkg not in c_dict:  # pkg not in the dictionary
-            c_dict[pkg] = []
-        if (pkg, arg) not in c_dict:  # (pkg, arg) not in the dictionary
-            c_dict[(pkg, arg)] = []
+        # get all task-sets where the current task is the only task
+        taskset_list = database.read_table_taskset(task_id=task[0], convert=False)
 
-        # read all sucessfully run jobs of the task
-        job_attributes = database.read_table_job(task_id=task[0], exit_value='EXIT')
+        job_attributes = []  # create empty list for the jobs
 
-        if job_attributes:  # at least one job was read
-            # calculate execution time of each job
-            job_list = _calculate_executiontimes(job_attributes)
+        for taskset in taskset_list:  # iterate over all task-sets
+            # add all jobs of the current task and task-set
+            job_attributes.extend(database.read_table_job(set_id=taskset[0], task_id=task[0]))
 
-        # add execution times to the dictionary
-        c_dict[pkg].extend(job_list)  # add execution times to PKG
-        c_dict[(pkg, arg)].extend(job_list)  # add execution times to (PKG, arg)
+        # calculate execution time of each job
+        job_execution_times = _calculate_executiontimes(job_attributes)
 
-    # create empty list for keys to be deleted
-    delete_keys = []
+        # calculate average execution time of current task
+        average_c = sum(job_execution_times) / len(job_execution_times)
 
-    # iterate over all dictionary keys
-    for key in c_dict:
-        if c_dict[key]:  # at least one execution time was found
-            # calculate average execution time
-            average_c = sum(c_dict[key]) / len(c_dict[key])
+        # round and add execution time to the dictionary
+        c_dict[task[0]] = round(average_c)
 
-            # round and save calculated value
-            c_dict[key] = round(average_c)
-        else:  # no execution time was found: delete key from dictionary
-            delete_keys.append(key)
+    end_time = time.time()
+    logger.info("Benchmark of execution times finished!")
+    logger.info("Time elapsed: %f s", end_time - start_time)
 
-    # delete unused keys
-    for key in delete_keys:
-        del c_dict[key]
-
-    # write execution times to database
+    # write execution times to the database
     logger.info("Saving calculated execution times to database...")
     database.write_execution_time(c_dict)
-    logger.info("Saving successful! Benchmark finished!")
+    logger.info("Saving successful!")
 
 
 def _calculate_executiontimes(job_attributes):
-    """Calculate the executiontimes of jobs.
+    """Calculate the execution times of the given jobs.
 
-    This method calculates the executiontimes of a list of jobs with the following attributes:
+    This method calculates the execution times of a list of jobs with the following attributes:
         Set_ID
         Task_ID
         Job_ID
@@ -83,24 +68,14 @@ def _calculate_executiontimes(job_attributes):
     Return:
         executiontimes -- list with the executiontimes
     """
-    executiontimes = []  # create empty list for executiontimes
+    executiontimes = []  # create empty list for execution times
 
     # iterate over all jobs
     for job in job_attributes:
-        execution_time = job[4] - job[3]  # calculate executiontime = end_date - start_date
+        execution_time = job[4] - job[3]  # calculate execution time = end_date - start_date
 
         # check if execution_time is valid
         if execution_time > 0:
-            executiontimes.append(execution_time)  # append executiontime to list
+            executiontimes.append(execution_time)  # append execution time to list
 
     return executiontimes
-
-
-if __name__ == "__main__":
-    # Configure logging: format should be "LEVELNAME: Message",
-    # logging level should be DEBUG (all messages are shown)
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-
-    # create Database object - benchmark is started within constructor
-    database_interface.Database(db_dir="C:\\Users\\tatjana.utz\\PycharmProjects\\Datenbanken",
-                                db_name="panda_v3.db")

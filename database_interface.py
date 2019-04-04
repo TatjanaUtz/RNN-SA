@@ -1,78 +1,126 @@
-"""Class and methods for database connectivity.
-
-This module provides classes and methods for importing task-sets from the SQLite database
-and formatting data into a format usable with tensorflow.
-"""
+"""Class and methods for database connectivity."""
 
 import logging
+import operator
 import os
 import sqlite3
 
-from benchmark import benchmark_execution_times
-from database_filter import filter_database
-
-# default task execution times
-DEFAULT_EXECUTION_TIMES = {
-    ("hey", 0): 1045,
-    ("hey", 1000): 1094,
-    ("hey", 1000000): 1071,
-
-    ("pi", 100): 1574,
-    ("pi", 10000): 1693,
-    ("pi", 100000): 1870,
-
-    ("cond_42", 41): 1350,
-    ("cond_42", 42): 1376,
-    ("cond_42", 10041): 1413,
-    ("cond_42", 10042): 1432,
-    ("cond_42", 1000041): 1368,
-    ("cond_42", 1000042): 1396,
-
-    ("cond_mod", 100): 1323,
-    ("cond_mod", 103): 1351,
-    ("cond_mod", 10000): 1395,
-    ("cond_mod", 10003): 1391,
-    ("cond_mod", 1000000): 1342,
-    ("cond_mod", 1000003): 1391,
-
-    ("tumatmul", 10): 1511,
-    ("tumatmul", 11): 1543,
-    ("tumatmul", 10000): 1692,
-    ("tumatmul", 10001): 1662,
-    ("tumatmul", 1000000): 3009,
-    ("tumatmul", 1000001): 3121,
-
-    "hey": 1070,
-    "pi": 1712,
-    "cond_42": 1389,
-    "cond_mod": 1366,
-    "tumatmul": 2090
-}
+import benchmark
+import database_filter
 
 
-class Database():
+class Task:
+    """Representation of a task.
+
+    Currently only the following attributes are integrated:
+        id -- id of the task, corresponds to column 'Task_ID'
+        priority -- priority of task, 1 is the highest priority
+        pkg -- name of the task, corresponds to column 'PKG'
+        arg -- argument of task, has influence on the execution time
+        deadline -- deadline of the task
+        period -- period of the task
+        number_of_jobs -- number of jobs, defines how often the task is executed
+        execution_time -- time needed to execute the task
+    """
+
+    def __init__(self, task_id=-1, priority=-1, pkg=None, arg=None, deadline=-1, period=-1,
+                 number_of_jobs=-1, execution_time=-1):
+        """Constructor"""
+        self.task_id = task_id
+        self.priority = priority
+        self.pkg = pkg
+        self.arg = arg
+        self.deadline = deadline
+        self.period = period
+        self.number_of_jobs = number_of_jobs
+        self.execution_time = execution_time
+        if self.deadline == -1:
+            self.deadline = self.period
+
+    def __str__(self):
+        """Represent task as string."""
+        repr_str = "(id=" + str(self.task_id) + " prio=" + str(self.priority) + " " + str(self.pkg) \
+                   + "(" + str(self.arg) + ") D=" + str(self.deadline) + " T=" + str(self.period) \
+                   + " " + str(self.number_of_jobs) + "x C=" + str(self.execution_time) + ")"
+        return repr_str
+
+
+class Taskset:
+    """Representation of a task-set.
+
+    Currently only the following attributes are integrated:
+        taskset_id -- ID of the task-set, corresponds to column 'Set_ID'
+        result -- 1 if task-set could be successfully scheduled, otherwise 0, corresponds to column
+                  'Sucessful'
+        tasks -- list of tasks (of type Task)
+    """
+
+    def __init__(self, taskset_id=-1, result=-1, tasks=None):
+        """Constructor."""
+        self.taskset_id = taskset_id
+        self.result = result
+        if tasks is None:
+            self.tasks = []
+        else:
+            self.tasks = tasks
+
+        # Sort tasks according to priorities
+        self.tasks.sort(key=operator.attrgetter('priority'))
+
+    def __str__(self):
+        """Represent Taskset object as String."""
+        representation_string = "id=" + str(self.taskset_id) + " result=" + str(self.result) + " " \
+                                + str([str(task) for task in self.tasks])
+        return representation_string
+
+    def __len__(self):
+        """Get length of task-set = number of tasks."""
+        return len(self.tasks)
+
+    def __iter__(self):
+        """Iterate over the task-list."""
+        return self.tasks.__iter__()
+
+    def __getitem__(self, index):
+        """Get task at index."""
+        return self.tasks[index]
+
+    def add_task(self, task):
+        """Add a new task to the task-set.
+
+        Check the input argument. If a correct input is given, add the task to the task-set and
+        sort it according to priorities.
+
+        Args:
+            task -- the task that should be added, must be of type 'Task'
+        """
+        # check input arguments
+        if not isinstance(task, Task):  # wrong input argument
+            raise ValueError("task must be of type Task")
+
+        self.tasks.append(task)  # add task to task-set
+        self.tasks.sort(
+            key=operator.attrgetter('priority'))  # sort tasks according to increasing priorities
+
+
+class Database:
     """Class representing a database.
 
-    The database is defined by the following attributes:
+    The database is defined by following attributes:
         db_dir -- path to the database file (*.db)
         db_name -- name of the database file (incl. .db)
     Additional attributes of a Database object are:
         db_connection -- connection to the database
         db_cursor -- cursor for working with the database
-        execution_time_dict -- dictionary with the execution times of the tasks
     """
 
-    # TODO: identisch, aber execution time nur wenn filter
-    def __init__(self):
+    def __init__(self, db_dir, db_name):
         """Constructor of class Database."""
 
-        self.db_dir = "C:\\Users\\tatjana.utz\\PycharmProjects\\RNN-SA"  # path to the database
-        self.db_name = 'panda_v2.db'  # name of the database
+        self.db_dir = db_dir  # path to the database
+        self.db_name = db_name  # name of the database
         self.db_connection = None  # connection to the database
         self.db_cursor = None  # cursor for working with the database
-
-        # initalize execution times with default values
-        self.execution_time_dict = DEFAULT_EXECUTION_TIMES
 
         # check that database exists
         self._check_if_database_exists()
@@ -80,15 +128,11 @@ class Database():
         # check the database: check if all necessary tables exist
         self._check_database()
 
-        # read table 'ExecutionTime': update execution times
-        self.execution_time_dict = self.read_table_executiontime()
-
     #############################
     # check database and tables #
     #############################
 
-    # TODO: identisch
-    def check_if_database_exists(self):
+    def _check_if_database_exists(self):
         """Check if the database file exists.
 
         This method checks if the database defined by self.db_dir and self.db_name exists. If not,
@@ -98,10 +142,9 @@ class Database():
 
         # check if database exists
         if not os.path.exists(db_path):  # database doesn't exists: raise exception
-            raise Exception("database '%s' not found in %s", self.db_name, self.db_dir)
+            raise Exception("database '%s' not found in %s" % (self.db_name, self.db_dir,))
 
-    # TODO: fast identisch - Tabelle CorrectTaskSet
-    def check_database(self):
+    def _check_database(self):
         """Check the database.
 
         This method checks the database, i.e. if all necessary tables are present. The necessary
@@ -109,45 +152,39 @@ class Database():
             Job
             Task
             TaskSet
-            ExecutionTime.
+            CorrectTaskSet (ExecutionTime).
         If a table does not exist in the database, it is created (if possible) or an Exception is
         raised.
         """
         # check table Job
         if not self._check_if_table_exists('Job'):  # table Job does not exist
-            raise Exception("no such table: %s", 'Job')
+            raise Exception("no such table: %s" % ('Job',))
 
         # check table Task
         if not self._check_if_table_exists('Task'):  # table Task does not exist
-            raise Exception("no such table: %s", 'Task')
+            raise Exception("no such table: %s" % ('Task',))
 
         # check table TaskSet
         if not self._check_if_table_exists('TaskSet'):  # table TaskSet does not exist
-            raise Exception("no such table: %s", 'TaslSet')
-
-        # check table ExecutionTime
-        if not self._check_if_table_exists('ExecutionTime'):
-            # table ExecutionTime does not exist: create it through benchmark
-            benchmark_execution_times(self)
-
-            # check that table was successfully created
-            if not self._check_if_table_exists('ExecutionTime'):  # something went wrong
-                raise Exception("nos such table %s - creation not possible", 'ExecutionTime')
+            raise Exception("no such table: %s" % ('TaskSet',))
 
         # check table CorrectTaskSet
-        if not self.check_if_table_exists('CorrectTaskSet'):
-            # table CorrectTaskSet does not exist: create it through filter
-            filter_database(self)
+        if not self._check_if_table_exists('CorrectTaskSet'):  # table CorrectTaskSet does not exist
+            # check table ExecutionTime
+            if not self._check_if_table_exists('ExecutionTime'):
+                # table ExecutionTime does not exist: create it through benchmark
+                benchmark.benchmark_execution_times(self)
+                # check that table was successfully created
+                if not self._check_if_table_exists('ExecutionTime'):  # something went wrong
+                    raise Exception("nos such table %s - creation not possible" % ('ExecutionTime'))
 
+            # create table CorrectTaskSet through filter
+            database_filter.filter_database(self)
             # check that table was successfully created
             if not self._check_if_table_exists('CorrectTaskSet'):  # something went wrong
-                raise Exception("nos such table %s - creation not possible", 'CorrectTaskSet')
+                raise Exception("nos such table %s - creation not possible" % ('CorrectTaskSet',))
 
-        # all tables exist
-        return True, None
-
-    # TODO: identisch
-    def check_if_table_exists(self, table_name):
+    def _check_if_table_exists(self, table_name):
         """Check if a table exists in the database.
 
         This method checks if the table defined by table_name exists in the database. This is done
@@ -179,7 +216,6 @@ class Database():
     # open / close database #
     #########################
 
-    # TODO: identisch
     def _open_db(self):
         """Open the database.
 
@@ -192,7 +228,6 @@ class Database():
         self.db_connection = sqlite3.connect(db_path)
         self.db_cursor = self.db_connection.cursor()
 
-    # TODO: identisch
     def _close_db(self):
         """Close the database.
 
@@ -211,29 +246,25 @@ class Database():
     # read / write tables #
     #######################
 
-    # TODO: identisch
-    def read_table_job(self, task_id=None, exit_value=None):
+    def read_table_job(self, set_id=None, task_id=None):
         """Read the table Job.
 
-        This method reads the table Job of the database. If task_id is not specified, the hole table
-        is read. If task_id is specified, only the jobs of the task defined by task_id are read.
-        If exit_value is specified, only the jobs with this exit_value are read.
+        This method reads the table Job of the database. If set_id or task_id is not specified, the
+        hole table is read. If set_id and task_id are specified, only the jobs of the task defined
+        by set_id and task_id are read.
 
         Args:
+            set_id -- ID of the task-set of the task which jobs should be read
             task_id -- ID of the task which jobs should be read
-            exit_value -- exit_value of the jobs that should be read
         Return:
             rows -- list with the job attributes
         """
-        # create logger
-        logger = logging.getLogger("RNN-SA.database.read_table_job")
-
         self._open_db()  # open database
 
-        if task_id is not None and exit_value is not None:
-            # read all jobs of task_id with exit_value
-            self.db_cursor.execute("SELECT * FROM Job WHERE Task_ID = ? AND Exit_Value = ?",
-                                   (task_id, exit_value))
+        if set_id is not None and task_id is not None:
+            # read all jobs of set_id and task_id
+            self.db_cursor.execute("SELECT * FROM Job WHERE Set_ID = ? AND Task_ID = ?",
+                                   (set_id, task_id))
         else:  # read all jobs
             self.db_cursor.execute("SELECT * FROM Job")
 
@@ -242,86 +273,85 @@ class Database():
 
         return rows
 
-    # TODO: fast identisch: dictionary
-    def read_table_task(self, task_id=None):
+    def read_table_task(self, task_id=None, convert_to_task_dict=True):
         """Read the table Task.
 
         This method reads the table Task of the database. If task_id is not specified, the hole
-        table is read. If task_id is specified, only the task defined by task_id is read.
+        table is read. If task_id is specified, only the task defined by task_id is read. The
+        argument dict defines, if the task attributes are converted to a dictionary with
+            key = task ID
+            value = Task-object.
 
         Args:
             task_id -- ID of the task which should be read
-            dict -- whether the tasks should be returned as list or dictionary
+            convert_to_task_dict -- whether the tasks should be returned as list or dictionary
         Return:
             rows -- list with the task attributes
             task_dict -- dictionary of the task attributes (key = task ID, value = Task-object)
         """
-        # create logger
-        logger = logging.getLogger("RNN-SA.database.read_table_task")
-
         self._open_db()  # open database
 
-        if task_id is not None:  # read task with task_id
+        if task_id is not None:  # read task with ID task_id
             self.db_cursor.execute("SELECT * FROM Task WHERE Task_ID = ?", (task_id,))
         else:  # read all tasks
-            self.db_cursor.execute("SELECT * FROM Task")
+            self.db_cursor.execute("SELECT * FROM Task ORDER BY Task_ID ASC")
 
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
+
+        if convert_to_task_dict:  # convert task attributes to dictionary
+            task_dict = self._convert_to_task_dict(rows)
+            return task_dict
 
         return rows
 
-    # TODO: noch nicht identisch
-    def read_table_taskset(self):
+    def read_table_taskset(self, taskset_id=None, task_id=None, convert=True):
         """Read the table TaskSet.
 
-        Read all rows of table TaskSet and split the table in labels and a task-set containing the
-        task IDs.
+        This method reads the table TaskSet of the database. If taskset_id is specified, only the
+        task-set of taskset_id is read. If task_id is specified, only the task-sets where the task
+        task_id is the only task are read. If neither taskset_id nor task_id is specified, the hole
+        table is read.
 
+        Args:
+            taskset_id -- ID of the task-set which should be read
+            task_id -- ID of the task which should be the only task in the task-set
+            convert -- whether the task-sets should be converted to objects of type Taskset
         Return:
-            tasksets -- list of task-sets containing the task IDs
-            labels -- the labels, i.e. the schedulability of the task-sets
+            dataset -- list with the task-sets
         """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database_interface.read_table_taskset')
-
         self._open_db()  # open database
-        # read all task-sets
-        self.db_cursor.execute("SELECT * FROM TaskSet")
+
+        if taskset_id is not None:  # read task-set with taskset_id
+            self.db_cursor.execute("SELECT * FROM TaskSet WHERE Set_ID = ?", (taskset_id,))
+        elif task_id is not None:  # read task-set where task_id is only task
+            self.db_cursor.execute("SELECT * FROM TaskSet WHERE TASK1_ID = ? AND TASK2_ID = ? AND "
+                                   "TASK3_ID = ? AND TASK4_ID = ?", (task_id, -1, -1, -1))
+        else:  # read all tasks-sets
+            self.db_cursor.execute("SELECT * FROM TaskSet")
+
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
 
-        if not rows:  # no task-set read
-            logger.debug("No task-set read!")
-            return None
+        if convert:  # convert task-sets to objects of type Taskset
+            dataset = self._convert_to_taskset(rows)
+            return dataset
 
-        # limit number of rows
-        # rows = rows[:10]
+        return rows
 
-        # split taskset IDs, task-sets and labels
-        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
-        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
-        labels = [x[1] for x in rows]  # list with corresponding labels
-
-        return taskset_ids, tasksets, labels
-
-    # TODO: identisch
-    def read_table_executiontime(self, dict=True):
+    def read_table_executiontime(self, convert_to_dict=True):
         """Read the table ExecutionTime.
 
         This method reads the table ExecutionTime. The hole table is read, i.e. all rows.
 
         Args:
-            dict -- whether the execution times should be returned as list or dictionary
+            convert_to_dict -- whether the execution times should be returned as list or dictionary
 
         Return:
             execution_times -- list with the execution times
-            c_dict -- dictionary of the execution times (key = PKG or (PKG, Arg), value = execution
+            c_dict -- dictionary of the execution times (key = TASK_ID, value = execution
                       time)
         """
-        # create logger
-        logger = logging.getLogger('traditional-SA.database.read_table_executiontime')
-
         self._open_db()  # open database
 
         # read all execution times
@@ -329,7 +359,7 @@ class Database():
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
 
-        if dict:  # convert execution times to dictionary
+        if convert_to_dict:  # convert execution times to dictionary
             c_dict = self._convert_to_executiontime_dict(rows)
             return c_dict
 
@@ -338,54 +368,38 @@ class Database():
     def read_table_correcttaskset(self):
         """Read the table CorrectTaskSet.
 
-        Read all rows of table CorrectTaskSet and split the table in labels and a task-set containing the
-        task IDs.
+        This method reads the table CorrectTaskSet of the database. If taskset_id is specified, only the task-set of taskset_id
+        is read. If task_id is specified, only the task-sets where the task task_id is the only task are read. If
+        neither taskset_id nor task_id is specified, the hole table is read.
 
         Return:
-            taskset_ids -- list of IDs of the task-sets
-            tasksets -- list of task-sets containing the task IDs
-            labels -- the labels, i.e. the schedulability of the task-sets
+            rows -- list with the task-sets
         """
-        # create logger
-        logger = logging.getLogger('RNN-SA.database_interface.read_table_correcttaskset')
-
         self._open_db()  # open database
-        # read all task-sets
-        self.db_cursor.execute("SELECT * FROM CorrectTaskSet")
+
+        self.db_cursor.execute("SELECT * FROM CorrectTaskSet")  # read all task-sets
         rows = self.db_cursor.fetchall()
         self._close_db()  # close database
 
-        if not rows:  # no task-set read
-            logger.debug("No task-set read!")
-            return None
+        return rows
 
-        # limit number of rows
-        # rows = rows[:10]
-
-        # split taskset IDs, task-sets and labels
-        taskset_ids = [x[0] for x in rows]  # list with all task-set IDs
-        tasksets = [x[2:] for x in rows]  # list with all task-sets containing the task IDs
-        labels = [x[1] for x in rows]  # list with corresponding labels
-
-        return taskset_ids, tasksets, labels
-
-    # TODO: identisch
     def write_execution_time(self, c_dict):
         """Write the execution times to the database.
 
         Args:
-            task_dict -- dictionary with all task execution times
+            task_dict -- dictionary with all task execution times (key = task_id, value = execution
+                         time)
         """
         # create logger
-        logger = logging.getLogger('RNN-SA.database_interface.write_execution_time')
+        logger = logging.getLogger('traditional-SA.database._write_execution_time')
 
         self._open_db()  # open database
 
         # create table ExecutionTime if it does not exist
         create_table_sql = "CREATE TABLE IF NOT EXISTS ExecutionTime (" \
-                           "[PKG(Arg)] TEXT, " \
+                           "TASK_ID INTEGER, " \
                            "Average_C INTEGER, " \
-                           "PRIMARY KEY([PKG(Arg)])" \
+                           "PRIMARY KEY(TASK_ID)" \
                            ");"
         try:
             self.db_cursor.execute(create_table_sql)
@@ -394,27 +408,22 @@ class Database():
 
         # sql statement for inserting or replacing a row in the ExecutionTime table
         insert_or_replace_sql = "INSERT OR REPLACE INTO ExecutionTime" \
-                                "([PKG(Arg)], Average_C)" \
-                                " VALUES(?, ?)"
+                                "(TASK_ID, Average_C) VALUES(?, ?)"
 
         # iterate over all keys
         for key in c_dict:
-            if isinstance(key, str):  # key = (PKG)
-                # insert or replace task-set
-                self.db_cursor.execute(insert_or_replace_sql, (key, c_dict[key]))
-            elif len(key) == 2:  # key = PKG(Arg)
-                self.db_cursor.execute(insert_or_replace_sql,
-                                       (key[0] + "(" + str(key[1]) + ")", c_dict[key]))
+            # insert or replace task-set
+            self.db_cursor.execute(insert_or_replace_sql, (key, c_dict[key]))
 
         self._close_db()  # close database
 
-    def write_correct_taskset(self, taskset_id, taskset, label):
-        """Write a task-set to the table CorrectTaskSet.
+    def write_correct_taskset(self, taskset):
+        """Write the correct task-set to to the database.
+
+        This method writes a correct taskset to the table 'CorrectTaskSet' of the database.
 
         Args:
-            taskset_id -- ID of the task-set
-            taskset -- list containing the task IDs
-            label -- label of the task-set = schedulabiltiy of task-set
+            taskset -- the task-set of type Taskset that should be added to the database
         """
         # create logger
         logger = logging.getLogger('RNN-SA.database_interface.write_correct_taskset')
@@ -422,7 +431,6 @@ class Database():
         self._open_db()  # open database
 
         # create table CorrectTaskSet if it does not exist
-
         create_table_sql = "CREATE TABLE IF NOT EXISTS CorrectTaskSet (" \
                            "Set_ID INTEGER, " \
                            "Successful INT, " \
@@ -442,12 +450,26 @@ class Database():
                                 "(Set_ID, Successful, TASK1_ID, TASK2_ID, TASK3_ID, TASK4_ID)" \
                                 " VALUES(?, ?, ?, ?, ?, ?)"
 
-        # insert or replace task-set
-        self.db_cursor.execute(insert_or_replace_sql, (taskset_id, label, taskset[0], taskset[1],
-                                                       taskset[2], taskset[3]))
+        num_tasks = len(taskset)  # get number of tasks in the task-set
 
-        # save (commit) changes
-        self.db_connection.commit()
+        # insert or replace task-set
+        if num_tasks == 1:  # only one task
+            task_id = taskset[0].task_id
+            self.db_cursor.execute(insert_or_replace_sql,
+                                   (taskset.taskset_id, taskset.result, taskset[0].task_id, -1, -1,
+                                    -1))
+        elif num_tasks == 2:  # two tasks
+            self.db_cursor.execute(insert_or_replace_sql,
+                                   (taskset.taskset_id, taskset.result, taskset[0].task_id,
+                                    taskset[1].task_id, -1, -1))
+        elif num_tasks == 3:  # three tasks
+            self.db_cursor.execute(insert_or_replace_sql,
+                                   (taskset.taskset_id, taskset.result, taskset[0].task_id,
+                                    taskset[1].task_id, taskset[2].task_id, -1))
+        elif num_tasks == 4:  # four tasks
+            self.db_cursor.execute(insert_or_replace_sql,
+                                   (taskset.taskset_id, taskset.result, taskset[0].task_id,
+                                    taskset[1].task_id, taskset[2].task_id, taskset[3].task_id))
 
         self._close_db()  # close database
 
@@ -455,7 +477,6 @@ class Database():
     # conversion #
     ##############
 
-    # TODO: identisch
     def _convert_to_task_dict(self, task_attributes):
         """Convert a list of task attributes to a dictionary of Task-objects.
 
@@ -470,14 +491,13 @@ class Database():
         """
         task_dict = dict()  # create empty dictionary for tasks
 
+        execution_time_dict = self.read_table_executiontime()  # read table 'ExecutionTime'
+
         for row in task_attributes:  # iterate over all task attribute rows
-            # get execution time of task depending on PKG and Arg
-            pkg = row[5]
-            arg = row[6]
-            if (pkg, arg) in self.execution_time_dict:  # (PKG, Arg)
-                execution_time = self.execution_time_dict[(pkg, arg)]
-            else:  # (PKG)
-                execution_time = self.execution_time_dict[pkg]
+            if row[0] not in execution_time_dict:  # no execution time for task found
+                raise ValueError("Could not find an execution time for task %d" % (row[0],))
+
+            execution_time = execution_time_dict[row[0]]  # get execution time of task
 
             # create new task
             new_task = Task(task_id=row[0], priority=row[1], pkg=row[5], arg=row[6],
@@ -489,12 +509,49 @@ class Database():
 
         return task_dict
 
-    # TODO: identisch
+    def _convert_to_taskset(self, rows):
+        """Convert a list of task-sets to objects of type Taskset.
+
+        This function converts a list of task-sets from the table TaskSet to a list of Taskset
+        objects.
+
+        Args:
+            rows -- the rows read from the table TaskSet
+        Return:
+            dataset -- list of Taskset objects
+        """
+        # read table 'Task': get dictionary with task attributes
+        # (key = task ID, value = Task-object)
+        task_attributes = self.read_table_task()
+
+        dataset = []  # create empty list
+
+        # iterate over all rows
+        for row in rows:
+            # split taskset ID, label and taskset IDs
+            taskset_id = row[0]
+            label = row[1]
+            task_ids = row[2:]
+
+            # create empty task-set
+            new_taskset = Taskset(taskset_id=taskset_id, result=label, tasks=[])
+
+            # iterate over all tasks and add them to the task-set
+            for task_id in task_ids:
+                if task_id != -1:  # valid task-id
+                    new_task = task_attributes[task_id]  # get task
+                    new_taskset.add_task(new_task)  # add task to task-set
+
+            # add task-set to dataset
+            dataset.append(new_taskset)
+
+        return dataset
+
     def _convert_to_executiontime_dict(self, execution_times):
         """Convert a list of execution times to a dictionary.
 
         This function converts a list of execution times to a dictionary with
-            key = PKG or (PKG, Arg)
+            key = task ID
             value = execution time.
 
         Args:
@@ -503,25 +560,9 @@ class Database():
             c_dict -- dictionary with execution times
         """
         # create dictionary with default execution times
-        c_dict = DEFAULT_EXECUTION_TIMES
+        c_dict = dict()
 
         for row in execution_times:  # iterate over all execution time rows
-            # extract identifier and execution time
-            pkg_arg = row[0]
-            average_c = row[1]
-
-            # split pkg and arg and create new dictionary entry
-            if '(' in pkg_arg:  # string contains pkg and arg
-                pkg, arg = pkg_arg.split('(')
-                arg = int(arg[:-1])  # delete last character = ')' and format to int
-                dict_entry = {(pkg, arg): average_c}
-            else:  # string contains only pkg, no arg
-                pkg = pkg_arg
-                dict_entry = {pkg: average_c}
-
-            # update dictionary
-            c_dict.update(dict_entry)
+            c_dict[row[0]] = row[1]
 
         return c_dict
-
-
