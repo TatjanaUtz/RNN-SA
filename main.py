@@ -39,7 +39,7 @@ PKG_ENCODING = {
 def main():
     """Main function of project 'RNN-SA'."""
     # determine database directory and name
-    db_dir, db_name = ".\\", "panda_v2.db"
+    db_dir, db_name = "..\\Datenbanken\\", "panda_v3.db"
 
     # create and initialize logger
     logger = logging_config.init_logging()
@@ -57,7 +57,9 @@ def main():
     # hyperparameter exploration
     logger.info("Doing hyperparameter exploration...")
     start_time = time.time()
-    h = hyperparameter_exploration(data=data, name='LSTM', num='0')
+    #h = hyperparameter_exploration(data=data, name='LSTM', num='0')
+    out, model = ml_models.lstm_model(data['train_X'], data['train_y'], data['val_X'],
+                                      data['val_y'], params.hparams)
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
     logger.info("Best result: ")

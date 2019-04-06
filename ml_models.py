@@ -12,7 +12,18 @@ def lstm_model(x_train, y_train, x_val, y_val, params):
 
     callbacks = _init_callbacks(params, config)  # init callbacks
 
-    model = _build_lstm_model(params, config)  # build model
+    model = _build_LSTM_model(params, config)  # build model
+
+    # Configure the model for training (create optimizer and loss function)
+    # for binary classification the loss function should be 'binary_crossentropy'
+    model.compile(
+        # String (name of optimizer) or optimizer instance
+        optimizer='adam',
+        # String (name of objective function) or objective function (default: None)
+        loss='binary_crossentropy',
+        # List of metrics to be evaluated by the model during training and testing; typically
+        # you will use metrics=['accuracy'] (default: None)
+        metrics=['accuracy'])
 
     # train model
     out = model.fit(
@@ -45,8 +56,8 @@ def lstm_model(x_train, y_train, x_val, y_val, params):
     return out, model
 
 
-def _build_lstm_model(params, config):
-    # Create a Sequential model
+def _build_LSTM_model(params, config):
+    # create a Sequential model
     model = keras.models.Sequential()
 
     # create dropout layer: applies Dropout to the input
@@ -116,17 +127,6 @@ def _build_lstm_model(params, config):
         # activation function to use; if you don't specify anything, no activation is applied
         # (ie. "linear" activation: a(x) = x) (default: None)
         activation='sigmoid'))
-
-    # Configure the model for training (create optimizer and loss function)
-    # for binary classification the loss function should be 'binary_crossentropy'
-    model.compile(
-        # String (name of optimizer) or optimizer instance
-        optimizer='adam',
-        # String (name of objective function) or objective function (default: None)
-        loss='binary_crossentropy',
-        # List of metrics to be evaluated by the model during training and testing; typically
-        # you will use metrics=['accuracy'] (default: None)
-        metrics=['accuracy'])
 
     return model
 
