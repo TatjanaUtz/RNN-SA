@@ -9,8 +9,8 @@ import time  # for measuring time
 from random import shuffle  # for shuffle of the task-sets
 
 import keras
-import tensorflow as tf
 import matplotlib
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,7 +43,7 @@ PKG_ENCODING = {
 def main():
     """Main function of project 'RNN-SA'."""
     # determine database directory and name
-    db_dir, db_name = os.getcwd(), "panda_v3.db"
+    db_dir, db_name = os.getcwd(), "panda_v2.db"
 
     # create and initialize logger
     logger = logging_config.init_logging(db_dir, db_name)
@@ -61,38 +61,17 @@ def main():
     # hyperparameter exploration
     logger.info("Doing hyperparameter exploration...")
     start_time = time.time()
-    #h = hyperparameter_exploration(data=data, name='LSTM', num='0')
-    # out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
-    #                                   data['val_y'], params.hparams)
+    # #h = hyperparameter_exploration(data=data, name='LSTM', num='0')
+    out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
+                                      data['val_y'], params.hparams)
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
     logger.info("Best result: ")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
 
-    # multi GPU support
-    model = ml_models._build_LSTM_model(params.hparams, params.config)
-    try:
-        parallel_model = keras.utils.multi_gpu_model(model, cpu_relocation=True)
-        print("Training using multiple GPUs...")
-    except ValueError:
-        parallel_model = model
-        print("Training using single GPU or CPU...")
-    parallel_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    out = parallel_model.fit(
-        x=data['train_X'],
-        y=data['train_y'],
-        batch_size=params['batch_size'],
-        epochs=params['num_epochs'],
-        verbose=params.config['verbose_training'],
-        callbacks=ml_models._init_callbacks(params.hparams, params.config),
-        validation_data=[data['val_X'], data['val_y']],
-        shuffle=True,
-    )
-
-
-
     # evaluate
-    loss, acc = model.evaluate(data['test_X'], data['test_y'], batch_size=params.hparams['batch_size'])
+    loss, acc = model.evaluate(data['test_X'], data['test_y'],
+                               batch_size=params.hparams['batch_size'])
     logger.info("Loss: %f --- Accuracy: %f", loss, acc)
 
 

@@ -6,11 +6,11 @@ import os
 import keras
 
 
-def LSTM_model(x_train, y_train, x_val, y_val, params):
+def LSTM_model(x_train, y_train, x_val, y_val, hparams):
     """LSTM model with Keras."""
     from params import config  # import configuration parameters
 
-    model = _build_LSTM_model(params, config)  # build model
+    model = _build_LSTM_model(hparams, config)  # build model
 
     # Configure the model for training (create optimizer and loss function)
     # for binary classification the loss function should be 'binary_crossentropy'
@@ -30,16 +30,16 @@ def LSTM_model(x_train, y_train, x_val, y_val, params):
         # Numpy array of target (label) data
         y=y_train,
         # Integer or None, number of samples per gradient update (default: None = 32)
-        batch_size=params['batch_size'],
+        batch_size=hparams['batch_size'],
         # Integer, number of epochs to train the model; an epoch is an iteration over the entire
         # x and y data provided (default: 1)
-        epochs=params['num_epochs'],
+        epochs=hparams['num_epochs'],
         # Integer, 0, 1, or 2; verbosity mode, 0 = silent, 1 = progress bar, 2 = one line per
         # epoch (default: 1)
         verbose=config['verbose_training'],
         # List of keras.callbacks.Callback instances; list of callbacks to apply during training
         # and validation (default: None)
-        callbacks=_init_callbacks(params, config),
+        callbacks=_init_callbacks(hparams, config),
         # Data on which to evaluate the loss and any model metrics at the end of each epoch; the
         # model will not be trained on this data; validation_data will override validation_split;
         # validation_data could be: tuple (x_val, y_val) of Numpy arrays or tensors, tuple
@@ -54,7 +54,7 @@ def LSTM_model(x_train, y_train, x_val, y_val, params):
     return out, model
 
 
-def _build_LSTM_model(params, config):
+def _build_LSTM_model(hparams, config):
     # create a Sequential model
     model = keras.models.Sequential()
 
@@ -66,10 +66,10 @@ def _build_LSTM_model(params, config):
     #     rate=0)
 
     # only one LSTM layer: layer should specify input_shape and return only the last output
-    if params['num_cells'] == 1:
+    if hparams['num_cells'] == 1:
         model.add(keras.layers.LSTM(
             # positive integer, dimensionality of the output space
-            units=params['hidden_layer_size'],
+            units=hparams['hidden_layer_size'],
             # activation function to use; if you pass None, no activation is applied (ie. "linear"
             # activation: a(x) = x) (default: 'tanh')
             activation='tanh',
@@ -88,7 +88,7 @@ def _build_LSTM_model(params, config):
     else:
         # input LSTM layer: should specify input_shape and return a sequence of outputs
         model.add(keras.layers.LSTM(
-            units=params['hidden_layer_size'],
+            units=hparams['hidden_layer_size'],
             activation='tanh',
             return_sequences=True,
             input_shape=(config['time_steps'], config['element_size'])))
@@ -97,10 +97,10 @@ def _build_LSTM_model(params, config):
         # if params['keep_prob'] < 1.0: model.add(dropout_layer)
 
         # more than two LSTM layers: hidden layers should return a sequence of outputs
-        if params['num_cells'] > 2:
-            for i in range(params['num_cells'] - 2):
+        if hparams['num_cells'] > 2:
+            for i in range(hparams['num_cells'] - 2):
                 model.add(keras.layers.LSTM(
-                    units=params['hidden_layer_size'],
+                    units=hparams['hidden_layer_size'],
                     activation='tanh',
                     return_sequences=True))
 
@@ -109,7 +109,7 @@ def _build_LSTM_model(params, config):
 
         # output LSTM layer: should return only the last output
         model.add(keras.layers.LSTM(
-            units=params['hidden_layer_size'],
+            units=hparams['hidden_layer_size'],
             activation='tanh',
             return_sequences=False))
 
@@ -142,7 +142,7 @@ def _init_callbacks(params, config):
 
     if config['use_checkpoint']:
         # create dir for checkpoints
-        create_dirs([params.config['checkpoint_dir']])
+        _create_dirs([params.config['checkpoint_dir']])
 
         # create ModelCheckpoint: save the model after every epoch
         callbacks.append(
@@ -188,7 +188,7 @@ def _init_callbacks(params, config):
 
     if config['use_tensorboard']:
         # create dir for logs
-        create_dirs([params.config['tensorboard_log_dir']])
+        _create_dirs([params.config['tensorboard_log_dir']])
 
         # create TensorBoard: TensorBoard basic visualization, writes a log for TensorBoard
         callbacks.append(
@@ -266,7 +266,7 @@ def _init_callbacks(params, config):
     return callbacks
 
 
-def create_dirs(dirs):
+def _create_dirs(dirs):
     """To create directories.
 
     This function creates the given directories if these directories are not found.
