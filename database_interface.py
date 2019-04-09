@@ -138,7 +138,7 @@ class Database:
         This method checks if the database defined by self.db_dir and self.db_name exists. If not,
         an exception is raise.
         """
-        db_path = self.db_dir + "\\" + self.db_name  # create full path to database
+        db_path = os.path.join(self.db_dir, self.db_name)  # create full path to database
 
         # check if database exists
         if not os.path.exists(db_path):  # database doesn't exists: raise exception
@@ -222,7 +222,7 @@ class Database:
         This methods opens the database defined by self.db_dir and self.db_name by creating a
         database connection and a cursor.
         """
-        db_path = self.db_dir + "\\" + self.db_name  # create full path to the database
+        db_path = os.path.join(self.db_dir, self.db_name)  # create full path to the database
 
         # create database connection and a cursor
         self.db_connection = sqlite3.connect(db_path)
