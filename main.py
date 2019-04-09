@@ -39,7 +39,7 @@ PKG_ENCODING = {
 def main():
     """Main function of project 'RNN-SA'."""
     # determine database directory and name
-    db_dir, db_name = "..\\Datenbanken\\", "panda_v3.db"
+    db_dir, db_name = "..\\Datenbanken\\", "panda_v2.db"
 
     # create and initialize logger
     logger = logging_config.init_logging()
@@ -58,12 +58,16 @@ def main():
     logger.info("Doing hyperparameter exploration...")
     start_time = time.time()
     #h = hyperparameter_exploration(data=data, name='LSTM', num='0')
-    out, model = ml_models.lstm_model(data['train_X'], data['train_y'], data['val_X'],
+    out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
                                       data['val_y'], params.hparams)
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
     logger.info("Best result: ")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
+
+    # evaluate
+    loss, acc = model.evaluate(data['test_X'], data['test_y'], batch_size=params.hparams['batch_size'])
+    print("Loss: %f --- Accuracy: %f", loss, acc)
 
 
 def hyperparameter_exploration(data, name, num):
@@ -82,7 +86,7 @@ def hyperparameter_exploration(data, name, num):
         x=data['train_X'],  # prediction features
         y=data['train_y'],  # prediction outcome variable
         params=params.hparams,  # the parameter dictionary
-        model=ml_models.lstm_model,  # the Keras model as a function
+        model=ml_models.LSTM_model,  # the Keras model as a function
         dataset_name=name,  # used for experiment log
         experiment_no=num,  # used for experiment log
         x_val=data['val_X'],  # validation data for x

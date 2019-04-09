@@ -6,11 +6,9 @@ import os
 import keras
 
 
-def lstm_model(x_train, y_train, x_val, y_val, params):
+def LSTM_model(x_train, y_train, x_val, y_val, params):
     """LSTM model with Keras."""
     from params import config  # import configuration parameters
-
-    callbacks = _init_callbacks(params, config)  # init callbacks
 
     model = _build_LSTM_model(params, config)  # build model
 
@@ -41,7 +39,7 @@ def lstm_model(x_train, y_train, x_val, y_val, params):
         verbose=config['verbose_training'],
         # List of keras.callbacks.Callback instances; list of callbacks to apply during training
         # and validation (default: None)
-        callbacks=callbacks,
+        callbacks=_init_callbacks(params, config),
         # Data on which to evaluate the loss and any model metrics at the end of each epoch; the
         # model will not be trained on this data; validation_data will override validation_split;
         # validation_data could be: tuple (x_val, y_val) of Numpy arrays or tensors, tuple
