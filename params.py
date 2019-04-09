@@ -30,6 +30,10 @@ hparams = {
 }
 
 config = {
+    ### GPU ###
+    'use_gpus': True,   # whether to use GPU support for training
+    'num_gpus': 1,  # number of available GPUs
+
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
     'use_checkpoint': False,  # whether to use the ModelCheckpoint callback
