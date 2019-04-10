@@ -22,6 +22,12 @@ import logging_config
 import ml_models
 import params
 import os
+import tensorflow as tf
+
+# configuration for use of multiple CPUs
+# comment if only one CPU should be used
+config = tf.ConfigProto(device_count={"CPU": 40})
+keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
 # default indices of all task attributes (column indices of 'Task')
 DEFAULT_FEATURES = ['Task_ID', 'Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES',
@@ -43,7 +49,7 @@ PKG_ENCODING = {
 def main():
     """Main function of project 'RNN-SA'."""
     # determine database directory and name
-    db_dir, db_name = os.getcwd(), "panda_v2.db"
+    db_dir, db_name = os.getcwd(), "panda_v3.db"
 
     # create and initialize logger
     logger = logging_config.init_logging(db_dir, db_name)
@@ -61,18 +67,18 @@ def main():
     # hyperparameter exploration
     logger.info("Doing hyperparameter exploration...")
     start_time = time.time()
-    # #h = hyperparameter_exploration(data=data, name='LSTM', num='0')
-    out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
-                                      data['val_y'], params.hparams)
+    h = hyperparameter_exploration(data=data, name='LSTM', num='1')
+    # out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
+    #                                   data['val_y'], params.hparams)
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
-    logger.info("Best result: ")
+    logger.info("Best result: ", h.high('val_acc'))
     logger.info("Time elapsed: %f s \n", end_time - start_time)
 
     # evaluate
-    loss, acc = model.evaluate(data['test_X'], data['test_y'],
-                               batch_size=params.hparams['batch_size'])
-    logger.info("Loss: %f --- Accuracy: %f", loss, acc)
+    # loss, acc = model.evaluate(data['test_X'], data['test_y'],
+    #                            batch_size=params.hparams['batch_size'])
+    # logger.info("Loss: %f --- Accuracy: %f", loss, acc)
 
 
 def hyperparameter_exploration(data, name, num):

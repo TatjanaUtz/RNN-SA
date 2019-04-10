@@ -13,13 +13,13 @@
 
 hparams = {
     ### TRAINING ###
-    'batch_size': 100,  # size of each batch of data that is feed into the model
-    'num_epochs': 150,  # number of iterations to run the dataset through the model
+    'batch_size': [100],  # size of each batch of data that is feed into the model
+    'num_epochs': [150],  # number of iterations to run the dataset through the model
 
     ### MODEL ###
     # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
-    'num_cells': 1,  # number of LSTM cells
-    'hidden_layer_size': 27,
+    'num_cells': [1],  # number of LSTM cells
+    'hidden_layer_size': [27],
     # size of hidden dimension, 3 times the amount of element_size
     # 'hidden_activation_function': ['tanh'],  # activation function to use; if you pass None, no
     # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
@@ -30,10 +30,6 @@ hparams = {
 }
 
 config = {
-    ### GPU ###
-    'use_gpus': True,   # whether to use GPU support for training
-    'num_gpus': 1,  # number of available GPUs
-
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
     'use_checkpoint': False,  # whether to use the ModelCheckpoint callback

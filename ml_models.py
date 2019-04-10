@@ -56,82 +56,76 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
 
 
 def _build_LSTM_model(hparams, config):
-    with tf.device('/cpu:0'):
-        # create a Sequential model
-        model = keras.models.Sequential()
+    # create a Sequential model
+    model = keras.models.Sequential()
 
-        # create dropout layer: applies Dropout to the input
-        # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
-        # during training time, which helps prevent overfitting
-        # dropout_layer = keras.layers.Dropout(
-        #     # float between 0 and 1, fraction of the input units to drop
-        #     rate=0)
+    # create dropout layer: applies Dropout to the input
+    # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
+    # during training time, which helps prevent overfitting
+    # dropout_layer = keras.layers.Dropout(
+    #     # float between 0 and 1, fraction of the input units to drop
+    #     rate=0)
 
-        # only one LSTM layer: layer should specify input_shape and return only the last output
-        if hparams['num_cells'] == 1:
-            model.add(keras.layers.LSTM(
-                # positive integer, dimensionality of the output space
-                units=hparams['hidden_layer_size'],
-                # activation function to use; if you pass None, no activation is applied (ie. "linear"
-                # activation: a(x) = x) (default: 'tanh')
-                activation='tanh',
-                # Boolean, whether to return the last output in the output sequence, or the full
-                # sequence
-                return_sequences=False,
-                # expected input shape, only the first layer in a Sequential model needs to receive
-                # information about its input shape
-                input_shape=(config['time_steps'], config['element_size'])
-            ))
-
-            # add dropout layer if necessary
-            # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-        # more than one LSTM layer
-        else:
-            # input LSTM layer: should specify input_shape and return a sequence of outputs
-            model.add(keras.layers.LSTM(
-                units=hparams['hidden_layer_size'],
-                activation='tanh',
-                return_sequences=True,
-                input_shape=(config['time_steps'], config['element_size'])))
-
-            # add dropout layer if necessary
-            # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-            # more than two LSTM layers: hidden layers should return a sequence of outputs
-            if hparams['num_cells'] > 2:
-                for i in range(hparams['num_cells'] - 2):
-                    model.add(keras.layers.LSTM(
-                        units=hparams['hidden_layer_size'],
-                        activation='tanh',
-                        return_sequences=True))
-
-                    # add dropout layer if necessary
-                    # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-            # output LSTM layer: should return only the last output
-            model.add(keras.layers.LSTM(
-                units=hparams['hidden_layer_size'],
-                activation='tanh',
-                return_sequences=False))
-
-            # add dropout layer if necessary
-            # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-        # create and add a regular densely-connected NN layer as output layer
-        # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
-        # encoding) and the activation should be 'sigmoid'
-        model.add(keras.layers.Dense(
+    # only one LSTM layer: layer should specify input_shape and return only the last output
+    if hparams['num_cells'] == 1:
+        model.add(keras.layers.LSTM(
             # positive integer, dimensionality of the output space
-            units=config['num_classes'],
-            # activation function to use; if you don't specify anything, no activation is applied
-            # (ie. "linear" activation: a(x) = x) (default: None)
-            activation='sigmoid'))
+            units=hparams['hidden_layer_size'],
+            # activation function to use; if you pass None, no activation is applied (ie. "linear"
+            # activation: a(x) = x) (default: 'tanh')
+            activation='tanh',
+            # Boolean, whether to return the last output in the output sequence, or the full
+            # sequence
+            return_sequences=False,
+            # expected input shape, only the first layer in a Sequential model needs to receive
+            # information about its input shape
+            input_shape=(config['time_steps'], config['element_size'])
+        ))
 
-    if config['use_gpus']:
-        # replicate the model on multiple GPUs
-        parallel_model = keras.utils.multi_gpu_model(model, gpus=config['num_gpus'])
-        return parallel_model
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+    # more than one LSTM layer
+    else:
+        # input LSTM layer: should specify input_shape and return a sequence of outputs
+        model.add(keras.layers.LSTM(
+            units=hparams['hidden_layer_size'],
+            activation='tanh',
+            return_sequences=True,
+            input_shape=(config['time_steps'], config['element_size'])))
+
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+        # more than two LSTM layers: hidden layers should return a sequence of outputs
+        if hparams['num_cells'] > 2:
+            for i in range(hparams['num_cells'] - 2):
+                model.add(keras.layers.LSTM(
+                    units=hparams['hidden_layer_size'],
+                    activation='tanh',
+                    return_sequences=True))
+
+                # add dropout layer if necessary
+                # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+        # output LSTM layer: should return only the last output
+        model.add(keras.layers.LSTM(
+            units=hparams['hidden_layer_size'],
+            activation='tanh',
+            return_sequences=False))
+
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+    # create and add a regular densely-connected NN layer as output layer
+    # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
+    # encoding) and the activation should be 'sigmoid'
+    model.add(keras.layers.Dense(
+        # positive integer, dimensionality of the output space
+        units=config['num_classes'],
+        # activation function to use; if you don't specify anything, no activation is applied
+        # (ie. "linear" activation: a(x) = x) (default: None)
+        activation='sigmoid'))
 
     return model
 
