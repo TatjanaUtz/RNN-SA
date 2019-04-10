@@ -11,7 +11,10 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
     """LSTM model with Keras."""
     from params import config  # import configuration parameters
 
-    model = _build_LSTM_model(hparams, config)  # build model
+    if config['use_gpu']: # build model with GPU support
+        model = _build_LSTM_model_GPU(hparams, config)
+    else: # build model
+        model = _build_LSTM_model(hparams, config)  # build model
 
     # Configure the model for training (create optimizer and loss function)
     # for binary classification the loss function should be 'binary_crossentropy'
@@ -128,6 +131,75 @@ def _build_LSTM_model(hparams, config):
         activation='sigmoid'))
 
     return model
+
+def _build_LSTM_model_GPU(hparams, config):
+    # create a Sequential model
+    model = keras.models.Sequential()
+
+    # create dropout layer: applies Dropout to the input
+    # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
+    # during training time, which helps prevent overfitting
+    # dropout_layer = keras.layers.Dropout(
+    #     # float between 0 and 1, fraction of the input units to drop
+    #     rate=0)
+
+    # only one LSTM layer: layer should specify input_shape and return only the last output
+    if hparams['num_cells'] == 1:
+        model.add(keras.layers.CuDNNLSTM(
+            # positive integer, dimensionality of the output space
+            units=hparams['hidden_layer_size'],
+            # Boolean, whether to return the last output in the output sequence, or the full
+            # sequence
+            return_sequences=False,
+            # expected input shape, only the first layer in a Sequential model needs to receive
+            # information about its input shape
+            input_shape=(config['time_steps'], config['element_size'])
+        ))
+
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+    # more than one LSTM layer
+    else:
+        # input LSTM layer: should specify input_shape and return a sequence of outputs
+        model.add(keras.layers.CuDNNLSTM(
+            units=hparams['hidden_layer_size'],
+            return_sequences=True,
+            input_shape=(config['time_steps'], config['element_size'])))
+
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+        # more than two LSTM layers: hidden layers should return a sequence of outputs
+        if hparams['num_cells'] > 2:
+            for i in range(hparams['num_cells'] - 2):
+                model.add(keras.layers.CuDNNLSTM(
+                    units=hparams['hidden_layer_size'],
+                    return_sequences=True))
+
+                # add dropout layer if necessary
+                # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+        # output LSTM layer: should return only the last output
+        model.add(keras.layers.CuDNNLSTM(
+            units=hparams['hidden_layer_size'],
+            return_sequences=False))
+
+        # add dropout layer if necessary
+        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+
+    # create and add a regular densely-connected NN layer as output layer
+    # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
+    # encoding) and the activation should be 'sigmoid'
+    model.add(keras.layers.Dense(
+        # positive integer, dimensionality of the output space
+        units=config['num_classes'],
+        # activation function to use; if you don't specify anything, no activation is applied
+        # (ie. "linear" activation: a(x) = x) (default: None)
+        activation='sigmoid'))
+
+    return model
+
 
 
 def _init_callbacks(params, config):

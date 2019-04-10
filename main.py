@@ -26,8 +26,8 @@ import tensorflow as tf
 
 # configuration for use of multiple CPUs
 # comment if only one CPU should be used
-config = tf.ConfigProto(device_count={"CPU": 40})
-keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
+#config = tf.ConfigProto(device_count={"CPU": 40})
+#keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
 # default indices of all task attributes (column indices of 'Task')
 DEFAULT_FEATURES = ['Task_ID', 'Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES',
