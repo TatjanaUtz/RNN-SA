@@ -13,8 +13,8 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
 
     if config['use_gpu']: # build model with GPU support
         with tf.device('/cpu:0'):
-            model = _build_LSTM_model_GPU(hparams, config)
-        parallel_model = keras.utils.multi_gpu_model(model=model, gpus=8)
+            model = _build_LSTM_model(hparams, config)
+        parallel_model = keras.utils.multi_gpu_model(model=model, gpus=3)
         model = parallel_model
     else: # build model
         model = _build_LSTM_model(hparams, config)  # build model
