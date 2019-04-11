@@ -10,10 +10,11 @@
     Configuration parameters config: a regular Python dictionary that declares other parameters
                                      necessary to configure a Keras model
 """
+import numpy as np
 
 hparams = {
     ### TRAINING ###
-    'batch_size': [75, 100, 150, 200, 300, 400, 500],  # size of each batch of data that is
+    'batch_size': np.random.randint(32, 1024, (10)),  # size of each batch of data that is
     # feed into
     # the model
     'num_epochs': [150],  # number of iterations to run the dataset through the model

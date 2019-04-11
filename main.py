@@ -11,6 +11,8 @@ from random import shuffle  # for shuffle of the task-sets
 import keras
 import matplotlib
 
+# this line is needed for Ubuntu
+# uncomment if you want to plot with Windows
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,11 +24,6 @@ import logging_config
 import ml_models
 import params
 import os
-
-# configuration for use of multiple CPUs
-# comment if only one CPU should be used
-# config = tf.ConfigProto(device_count={"CPU": 40})
-# keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
 # default indices of all task attributes (column indices of 'Task')
 DEFAULT_FEATURES = ['Task_ID', 'Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES',
@@ -57,10 +54,10 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='2')
+    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='3')
 
     # plotting
-    #plot()
+    # plot()
 
 
 def hyperparameter_exploration(data, name, num):
@@ -117,7 +114,7 @@ def plot():
     x = []
     y = []
 
-    with open('LSTM_batch_size_1.csv', 'r') as csvfile:
+    with open('LSTM_batch_size.csv', 'r') as csvfile:
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)
         for row in plots:
@@ -125,7 +122,7 @@ def plot():
             y.append(float(row[2]))
 
     plt.plot(x, y, 'o')
-    #plt.plot([0, 200], [0.9275, 0.9275], 'r')
+    # plt.plot([0, 200], [0.9275, 0.9275], 'r')
     plt.xlabel('batch size')
     plt.ylabel('val_acc')
     plt.axis([0, 1024, 0.92, 1])
