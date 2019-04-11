@@ -22,12 +22,11 @@ import logging_config
 import ml_models
 import params
 import os
-import tensorflow as tf
 
 # configuration for use of multiple CPUs
 # comment if only one CPU should be used
-#config = tf.ConfigProto(device_count={"CPU": 40})
-#keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
+# config = tf.ConfigProto(device_count={"CPU": 40})
+# keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
 # default indices of all task attributes (column indices of 'Task')
 DEFAULT_FEATURES = ['Task_ID', 'Priority', 'Deadline', 'Quota', 'CAPS', 'PKG', 'Arg', 'CORES',
@@ -55,30 +54,13 @@ def main():
     logger = logging_config.init_logging(db_dir, db_name)
 
     # load the data
-    logger.info("Loading and pre-processing data from the database...")
-    start_time = time.time()
     data = load_data(db_dir, db_name)
-    end_time = time.time()
-    logger.info("Successfully loaded %d samples for training, %d samples for evaluation and %d "
-                "samples for testing from the database!", len(data['train_y']), len(data['val_y']),
-                len(data['test_y']))
-    logger.info("Time elapsed: %f s \n", end_time - start_time)
 
     # hyperparameter exploration
-    logger.info("Doing hyperparameter exploration...")
-    start_time = time.time()
-    h = hyperparameter_exploration(data=data, name='LSTM', num='1')
-    # out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
-    #                                   data['val_y'], params.hparams)
-    end_time = time.time()
-    logger.info("Finished hyperparameter exploration!")
-    logger.info("Best result: ", h.high('val_acc'))
-    logger.info("Time elapsed: %f s \n", end_time - start_time)
+    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='2')
 
-    # evaluate
-    # loss, acc = model.evaluate(data['test_X'], data['test_y'],
-    #                            batch_size=params.hparams['batch_size'])
-    # logger.info("Loss: %f --- Accuracy: %f", loss, acc)
+    # plotting
+    #plot()
 
 
 def hyperparameter_exploration(data, name, num):
@@ -93,6 +75,10 @@ def hyperparameter_exploration(data, name, num):
     Return:
         h -- the scan object created by TALOS with several attributes for evaluation
     """
+    logger = logging.getLogger('RNN-SA.main.hyperparameter_exploration')
+    logger.info("Doing hyperparameter exploration...")
+    start_time = time.time()
+
     h = talos.Scan(
         x=data['train_X'],  # prediction features
         y=data['train_y'],  # prediction outcome variable
@@ -104,6 +90,12 @@ def hyperparameter_exploration(data, name, num):
         y_val=data['val_y'],  # validation data for y
         # grid_downsample=0.1,  # a float to indicate fraction for random sampling
     )
+
+    end_time = time.time()
+    logger.info("Finished hyperparameter exploration!")
+    logger.info("Best result: ", h.high('val_acc'))
+    logger.info("Time elapsed: %f s \n", end_time - start_time)
+
     return h
 
 
@@ -125,7 +117,7 @@ def plot():
     x = []
     y = []
 
-    with open('lstm_2.csv', 'r') as csvfile:
+    with open('LSTM_batch_size_1.csv', 'r') as csvfile:
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)
         for row in plots:
@@ -133,10 +125,11 @@ def plot():
             y.append(float(row[2]))
 
     plt.plot(x, y, 'o')
-    plt.plot([0, 200], [0.9275, 0.9275], 'r')
-    plt.xlabel('epochs')
+    #plt.plot([0, 200], [0.9275, 0.9275], 'r')
+    plt.xlabel('batch size')
     plt.ylabel('val_acc')
-    plt.axis([0, 200, 0.8, 1])
+    plt.axis([0, 1024, 0.92, 1])
+    plt.xticks([32, 64, 128, 256, 512, 1024])
     plt.show()
 
 
@@ -150,6 +143,8 @@ def load_data(db_dir, db_name):
         data -- dictionary with the train, test and validation data
     """
     logger = logging.getLogger('RNN-SA.main.load_data')
+    logger.info("Loading and pre-processing data from the database...")
+    start_time = time.time()
 
     # try to create Database-object
     try:
@@ -206,6 +201,12 @@ def load_data(db_dir, db_name):
     # split test/validation in test and validation data: 50% data each, i.e. 10% of hole dataset
     data["test_X"], data["val_X"], data["test_y"], data["val_y"] = \
         sklearn.model_selection.train_test_split(test_val_x, test_val_y, test_size=0.5)
+
+    end_time = time.time()
+    logger.info("Successfully loaded %d samples for training, %d samples for evaluation and %d "
+                "samples for testing from the database!", len(data['train_y']), len(data['val_y']),
+                len(data['test_y']))
+    logger.info("Time elapsed: %f s \n", end_time - start_time)
 
     return data
 

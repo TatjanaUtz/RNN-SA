@@ -13,7 +13,9 @@
 
 hparams = {
     ### TRAINING ###
-    'batch_size': [100],  # size of each batch of data that is feed into the model
+    'batch_size': [75, 100, 150, 200, 300, 400, 500],  # size of each batch of data that is
+    # feed into
+    # the model
     'num_epochs': [150],  # number of iterations to run the dataset through the model
 
     ### MODEL ###
@@ -31,7 +33,7 @@ hparams = {
 
 config = {
     ### GPU support ###
-    'use_gpu': True,    # whether to use GPU(s) for training
+    'use_gpu': False,    # whether to use GPU(s) for training
     
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
