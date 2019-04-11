@@ -5,15 +5,16 @@ Run this file for schedulability analysis with recurrent neural network (RNN).
 
 import csv
 import logging
-import time  # for measuring time
-from random import shuffle  # for shuffle of the task-sets
+import time
+import random
 
 import keras
-import matplotlib
 
 # this line is needed for Ubuntu
 # uncomment if you want to plot with Windows
+import matplotlib
 matplotlib.use('agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
@@ -49,15 +50,16 @@ def main():
 
     # create and initialize logger
     logger = logging_config.init_logging(db_dir, db_name)
+    logger.info("Batch sizes:", params.hparams['batch_size'])
 
     # load the data
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='3')
+    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='5')
 
     # plotting
-    # plot()
+    #plot()
 
 
 def hyperparameter_exploration(data, name, num):
@@ -90,7 +92,7 @@ def hyperparameter_exploration(data, name, num):
 
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
-    logger.info("Best result: ", h.high('val_acc'))
+    logger.info("Best result: ")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
 
     return h
@@ -125,8 +127,8 @@ def plot():
     # plt.plot([0, 200], [0.9275, 0.9275], 'r')
     plt.xlabel('batch size')
     plt.ylabel('val_acc')
-    plt.axis([0, 1024, 0.92, 1])
-    plt.xticks([32, 64, 128, 256, 512, 1024])
+    #plt.axis([0, 1024, 0.92, 1])
+    #plt.xticks([32, 64, 128, 256, 512, 1024])
     plt.show()
 
 
@@ -152,7 +154,7 @@ def load_data(db_dir, db_name):
 
     # read table 'CorrectTaskSet'
     rows = my_database.read_table_correcttaskset()
-    shuffle(rows)  # shuffle rows
+    random.shuffle(rows)  # shuffle rows
 
     # split task-sets into task-set IDs, the task-sets (tuples of task IDs) and labels
     _, tasksets, labels = _split_tasksets(rows)
@@ -212,7 +214,7 @@ def _split_tasksets(rows):
     """Split task-sets.
 
     This function splits a task-set consisting of [Set_ID, Successful, TASK1_ID, TASK2_ID,
-    TASK3_ID, TASK4_ID] into a list with the task-set IDs, the labels and the task IDs.
+    TASK3_ID, TASK4_ID into a list with the task-set IDs, the labels and the task IDs.
 
     Args:
         rows -- an array with the rows representing each a task-set
