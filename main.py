@@ -50,13 +50,13 @@ def main():
 
     # create and initialize logger
     logger = logging_config.init_logging(db_dir, db_name)
-    logger.info("Batch sizes:", params.hparams['batch_size'])
+    #logger.info("Batch sizes:", params.hparams['batch_size'])
 
     # load the data
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='5')
+    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='6')
 
     # plotting
     #plot()
@@ -127,8 +127,8 @@ def plot():
     # plt.plot([0, 200], [0.9275, 0.9275], 'r')
     plt.xlabel('batch size')
     plt.ylabel('val_acc')
-    #plt.axis([0, 1024, 0.92, 1])
-    #plt.xticks([32, 64, 128, 256, 512, 1024])
+    #plt.axis([0, 1024, 0.91, 1])
+    plt.xticks([32, 64, 128, 256, 512, 1024])
     plt.show()
 
 

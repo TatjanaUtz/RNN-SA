@@ -14,7 +14,7 @@ import numpy as np
 
 hparams = {
     ### TRAINING ###
-    'batch_size': np.random.randint(low=32, high=1024, size=50),  # size of each batch of data
+    'batch_size': np.random.randint(low=32, high=256, size=10),  # size of each batch of data
     # that is
     # feed into the model
     'num_epochs': [150],  # number of iterations to run the dataset through the model
