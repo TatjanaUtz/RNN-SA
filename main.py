@@ -12,8 +12,8 @@ import keras
 
 # this line is needed for Ubuntu
 # uncomment if you want to plot with Windows
-#import matplotlib
-#matplotlib.use('agg')
+import matplotlib
+matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
