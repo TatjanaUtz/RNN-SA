@@ -10,8 +10,10 @@ import random
 
 import keras
 
-# this line is needed for Ubuntu
-# uncomment if you want to plot with Windows
+# this lines are needed for systems without the python3-tk package to avoid the following errors:
+# ModuleNotFoundError: No module named '_tkinter'
+# Import Error: No module named '_tkinter', please install the python3-tk package
+# GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
 #import matplotlib
 #matplotlib.use('agg')
 
