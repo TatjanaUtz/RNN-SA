@@ -12,8 +12,8 @@ import keras
 
 # this line is needed for Ubuntu
 # uncomment if you want to plot with Windows
-import matplotlib
-matplotlib.use('agg')
+#import matplotlib
+#matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,13 +50,12 @@ def main():
 
     # create and initialize logger
     logger = logging_config.init_logging(db_dir, db_name)
-    #logger.info("Batch sizes:", params.hparams['batch_size'])
 
     # load the data
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='6')
+    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='7')
 
     # plotting
     #plot()
