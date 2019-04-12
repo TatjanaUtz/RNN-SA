@@ -7,6 +7,7 @@ import csv
 import logging
 import time
 import random
+random.seed(4)  # to make data-sets reproducible
 
 import keras
 
@@ -14,8 +15,8 @@ import keras
 # ModuleNotFoundError: No module named '_tkinter'
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
-#import matplotlib
-#matplotlib.use('agg')
+import matplotlib
+matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,7 +58,7 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_batch_size', num='7')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layers', num='1')
 
     # plotting
     #plot()
@@ -196,11 +197,13 @@ def load_data(db_dir, db_name):
 
     # split data into training and test/validation: 80% training data, 20% test/validation data
     data["train_X"], test_val_x, data["train_y"], test_val_y = \
-        sklearn.model_selection.train_test_split(tasksets_np, labels_np, test_size=0.2)
+        sklearn.model_selection.train_test_split(tasksets_np, labels_np, test_size=0.2,
+                                                 random_state=42)
 
     # split test/validation in test and validation data: 50% data each, i.e. 10% of hole dataset
     data["test_X"], data["val_X"], data["test_y"], data["val_y"] = \
-        sklearn.model_selection.train_test_split(test_val_x, test_val_y, test_size=0.5)
+        sklearn.model_selection.train_test_split(test_val_x, test_val_y, test_size=0.5,
+                                                 random_state=42)
 
     end_time = time.time()
     logger.info("Successfully loaded %d samples for training, %d samples for evaluation and %d "
