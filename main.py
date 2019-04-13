@@ -58,10 +58,11 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layers', num='1')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='1')
 
     # plotting
     #plot()
+    #do_plotting()
 
 
 def hyperparameter_exploration(data, name, num):
@@ -102,35 +103,58 @@ def hyperparameter_exploration(data, name, num):
 
 def do_plotting():
     # use filename as input
-    r = talos.Reporting('alle_Ergebnisse.csv')
+    r = talos.Reporting('LSTM_hidden_layers_1.csv')
 
     # heatmap correlation
-    r.plot_corr(metric='val_acc', color_grades=5)
+    #r.plot_corr(metric='val_acc', color_grades=5)
 
     # a four dimensional bar grid
-    r.plot_bars(x='batch_size', y='val_acc', hue='num_cells', col='hidden_layer_size')
+    r.plot_bars(x='num_cells', y='val_acc', hue='hidden_layer_size', col='batch_size')
 
     # show plots
     plt.show()
 
 
 def plot():
-    x = []
-    y = []
+    hidden_size = [[0 for i in range(5)] for i in range(6)]
 
-    with open('LSTM_batch_size.csv', 'r') as csvfile:
+    num_cells = [1, 2, 3, 4, 5]
+
+    with open('LSTM_hidden_layers_1.csv', 'r') as csvfile:
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)
         for row in plots:
-            x.append(int(row[6]))
-            y.append(float(row[2]))
+            if int(row[9]) == 3:
+                hidden_size[0][int(row[8])-1] = float(row[2])
+            elif int(row[9]) == 9:
+                hidden_size[1][int(row[8])-1] = float(row[2])
+            elif int(row[9]) == 27:
+                hidden_size[2][int(row[8])-1] = float(row[2])
+            elif int(row[9]) == 50:
+                hidden_size[3][int(row[8])-1] = float(row[2])
+            elif int(row[9]) == 75:
+                hidden_size[4][int(row[8])-1] = float(row[2])
+            elif int(row[9]) == 100:
+                hidden_size[5][int(row[8])-1] = float(row[2])
 
-    plt.plot(x, y, 'o')
+    #plt.plot(x, y, 'o')
     # plt.plot([0, 200], [0.9275, 0.9275], 'r')
-    plt.xlabel('batch size')
+
+    plt.plot(num_cells, hidden_size[0], 'bo-')
+    plt.plot(num_cells, hidden_size[1], 'go-')
+    plt.plot(num_cells, hidden_size[2], 'ro-')
+    plt.plot(num_cells, hidden_size[3], 'yo-')
+    plt.plot(num_cells, hidden_size[4], 'ko-')
+    plt.plot(num_cells, hidden_size[5], 'co-')
+
+    plt.xlabel('num_cells')
     plt.ylabel('val_acc')
     #plt.axis([0, 1024, 0.91, 1])
-    plt.xticks([32, 64, 128, 256, 512, 1024])
+    plt.xticks([1, 2, 3, 4, 5])
+
+    plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
+                'hidden_size = 75', 'hidden_size = 100'))
+
     plt.show()
 
 
