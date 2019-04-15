@@ -58,7 +58,7 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='1')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='2')
 
     # plotting
     #plot()

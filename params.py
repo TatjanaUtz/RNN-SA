@@ -22,8 +22,7 @@ hparams = {
     ### MODEL ###
     # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
     'num_cells': [1],  # number of LSTM cells
-    'hidden_layer_size': np.random.randint(low=27, high=10000, size=25),
-    # size of hidden dimension, 3 times the amount of element_size
+    'hidden_layer_size': np.random.randint(low=27, high=1000, size=10),
     # 'hidden_activation_function': ['tanh'],  # activation function to use; if you pass None, no
     # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
 
