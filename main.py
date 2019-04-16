@@ -60,7 +60,7 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='3')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='4')
 
     # visualization of results
     #plot()
@@ -85,13 +85,14 @@ def hyperparameter_exploration(data, name, num):
     h = talos.Scan(
         x=data['train_X'],  # prediction features
         y=data['train_y'],  # prediction outcome variable
-        params=params.hparams,  # the parameter dictionary
+        params=params.hparams_talos,  # the parameter dictionary
         model=ml_models.LSTM_model,  # the Keras model as a function
         dataset_name=name,  # used for experiment log
         experiment_no=num,  # used for experiment log
         x_val=data['val_X'],  # validation data for x
         y_val=data['val_y'],  # validation data for y
         # grid_downsample=0.1,  # a float to indicate fraction for random sampling
+        print_params=True,  # print each permutation hyperparameters
     )
 
     end_time = time.time()
@@ -160,12 +161,12 @@ def plot():
             y.append(float(row[2]))
 
     plt.plot(x, y, 'o')
-    # plt.plot([0, 200], [0.9275, 0.9275], 'r')
+    #plt.plot([100, 100], [0, 0.98], 'r')
 
 
     plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
-    # plt.axis([0, 1024, 0.91, 1])
+    plt.axis([0, 400, 0.88, 0.98])
     #plt.xticks([1, 2, 3, 4, 5])
 
     plt.show()

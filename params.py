@@ -1,18 +1,21 @@
 """Hyperparameters and configuration parameters.
 
-    Hyperparameters hparams: a regualar Python dictionary that declares the hyperparameters and the
-                             boundaries
-                             parameters may be inputted in three distinct ways:
-                             - as a set of discreet values in a list
-                             - as a range of values in a tuple (min, max, steps)
-                             - as a single value in a list
+    Hyperparameters hparams_talos: a regualar Python dictionary that declares the hyperparameters
+    and the boundaries, parameters may be inputted in three distinct ways:
+         - as a set of discreet values in a list
+         - as a range of values in a tuple (min, max, steps)
+         - as a single value in a list
+
+    Hyperparameters hparams: regular Python dictionary with static hyperparameters for Keras
+    model without the usage of Talos
 
     Configuration parameters config: a regular Python dictionary that declares other parameters
                                      necessary to configure a Keras model
 """
 import numpy as np
 
-hparams = {
+# hyperparameter for optimization with Talos
+hparams_talos = {
     ### TRAINING ###
     'batch_size': [128],  # size of each batch of data
     # that is
@@ -22,9 +25,9 @@ hparams = {
     ### MODEL ###
     # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
     'num_cells': [1],  # number of LSTM cells
-    'hidden_layer_size': [80, 90, 125, 150, 175, 200, 250, 300]
-        #np.random.randint(low=27, high=1000, size=10),
-    # 'hidden_activation_function': ['tanh'],  # activation function to use; if you pass None, no
+    'hidden_layer_size': np.random.randint(low=27, high=1000, size=20),
+    # 'hidden_activation': [keras.activations.tanh],  # activation function to use; if you pass
+    # None, no
     # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
 
     ### COMPILE ###
@@ -32,10 +35,29 @@ hparams = {
     # 'learning_rate': [0.0001],  # float >= 0, learning rate
 }
 
+# static hyperparameter for Keras model without Talos
+hparams = {
+    ### TRAINING ###
+    'batch_size': 128,  # size of each batch of data that is feed into the model
+    'num_epochs': 150,  # number of iterations to run the dataset through the model
+
+    ### MODEL ###
+    # 'keep_prob': 1.0,  # float between 0 and 1, fraction of the input units to drop
+    'num_cells': 1,  # number of LSTM cells
+    'hidden_layer_size': 100,
+    # 'hidden_activation': [keras.activations.tanh],  # activation function to use; if you pass
+    # None, no activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
+
+    ### COMPILE ###
+    # 'optimizer': [keras.optimizers.Adam],  # String (name of optimizer) or optimizer instance
+    # 'learning_rate': [0.0001],  # float >= 0, learning rate
+}
+
+# general configuration parameters
 config = {
     ### GPU support ###
-    'use_gpu': False,    # whether to use GPU(s) for training
-    
+    'use_gpu': False,  # whether to use GPU(s) for training
+
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
     'use_checkpoint': False,  # whether to use the ModelCheckpoint callback
