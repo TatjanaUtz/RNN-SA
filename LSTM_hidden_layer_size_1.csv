@@ -1,0 +1,2 @@
+round_epochs,val_loss,val_acc,loss,acc,lr,batch_size,num_epochs,num_cells,hidden_layer_size
+12,0.06233879803222389,0.9729973327464327,0.056381225159432474,0.9756999098031587,0.001,128,150,1,444
