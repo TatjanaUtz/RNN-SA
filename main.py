@@ -5,9 +5,10 @@ Run this file for schedulability analysis with recurrent neural network (RNN).
 
 import csv
 import logging
-import time
 import random
-random.seed(4)  # to make data-sets reproducible
+import time
+
+random.seed(4)  # to make random reproducible
 
 import keras
 
@@ -16,6 +17,7 @@ import keras
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
 import matplotlib
+
 matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
@@ -58,11 +60,10 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='2')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='3')
 
-    # plotting
+    # visualization of results
     #plot()
-    #do_plotting()
 
 
 def hyperparameter_exploration(data, name, num):
@@ -106,7 +107,7 @@ def do_plotting():
     r = talos.Reporting('LSTM_hidden_layers_1.csv')
 
     # heatmap correlation
-    #r.plot_corr(metric='val_acc', color_grades=5)
+    # r.plot_corr(metric='val_acc', color_grades=5)
 
     # a four dimensional bar grid
     r.plot_bars(x='num_cells', y='val_acc', hue='hidden_layer_size', col='batch_size')
@@ -117,43 +118,55 @@ def do_plotting():
 
 def plot():
     hidden_size = [[0 for i in range(5)] for i in range(6)]
-
     num_cells = [1, 2, 3, 4, 5]
 
-    with open('LSTM_hidden_layers_1.csv', 'r') as csvfile:
+    # with open('LSTM_hidden_layers_1.csv', 'r') as csvfile:
+    #     plots = csv.reader(csvfile, delimiter=',')
+    #     header = next(plots)
+    #     for row in plots:
+    #         if int(row[9]) == 3:
+    #             hidden_size[0][int(row[8]) - 1] = float(row[2])
+    #         elif int(row[9]) == 9:
+    #             hidden_size[1][int(row[8]) - 1] = float(row[2])
+    #         elif int(row[9]) == 27:
+    #             hidden_size[2][int(row[8]) - 1] = float(row[2])
+    #         elif int(row[9]) == 50:
+    #             hidden_size[3][int(row[8]) - 1] = float(row[2])
+    #         elif int(row[9]) == 75:
+    #             hidden_size[4][int(row[8]) - 1] = float(row[2])
+    #         elif int(row[9]) == 100:
+    #             hidden_size[5][int(row[8]) - 1] = float(row[2])
+
+    # plt.plot(num_cells, hidden_size[0], 'bo-')
+    # plt.plot(num_cells, hidden_size[1], 'go-')
+    # plt.plot(num_cells, hidden_size[2], 'ro-')
+    # plt.plot(num_cells, hidden_size[3], 'yo-')
+    # plt.plot(num_cells, hidden_size[4], 'ko-')
+    # plt.plot(num_cells, hidden_size[5], 'co-')
+
+    # plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
+    #             'hidden_size = 75', 'hidden_size = 100'))
+
+
+
+    x = []
+    y = []
+
+    with open('LSTM_hidden_layer_size.csv', 'r') as csvfile:
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)
         for row in plots:
-            if int(row[9]) == 3:
-                hidden_size[0][int(row[8])-1] = float(row[2])
-            elif int(row[9]) == 9:
-                hidden_size[1][int(row[8])-1] = float(row[2])
-            elif int(row[9]) == 27:
-                hidden_size[2][int(row[8])-1] = float(row[2])
-            elif int(row[9]) == 50:
-                hidden_size[3][int(row[8])-1] = float(row[2])
-            elif int(row[9]) == 75:
-                hidden_size[4][int(row[8])-1] = float(row[2])
-            elif int(row[9]) == 100:
-                hidden_size[5][int(row[8])-1] = float(row[2])
+            x.append(int(row[9]))
+            y.append(float(row[2]))
 
-    #plt.plot(x, y, 'o')
+    plt.plot(x, y, 'o')
     # plt.plot([0, 200], [0.9275, 0.9275], 'r')
 
-    plt.plot(num_cells, hidden_size[0], 'bo-')
-    plt.plot(num_cells, hidden_size[1], 'go-')
-    plt.plot(num_cells, hidden_size[2], 'ro-')
-    plt.plot(num_cells, hidden_size[3], 'yo-')
-    plt.plot(num_cells, hidden_size[4], 'ko-')
-    plt.plot(num_cells, hidden_size[5], 'co-')
 
-    plt.xlabel('num_cells')
+    plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
-    #plt.axis([0, 1024, 0.91, 1])
-    plt.xticks([1, 2, 3, 4, 5])
-
-    plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
-                'hidden_size = 75', 'hidden_size = 100'))
+    # plt.axis([0, 1024, 0.91, 1])
+    #plt.xticks([1, 2, 3, 4, 5])
 
     plt.show()
 
@@ -183,7 +196,7 @@ def load_data(db_dir, db_name):
     random.shuffle(rows)  # shuffle rows
 
     # split task-sets into task-set IDs, the task-sets (tuples of task IDs) and labels
-    _, tasksets, labels = _split_tasksets(rows)
+    tasksets, labels = _split_tasksets(rows)
 
     # read table 'Task'
     task_attributes = my_database.read_table_task(convert_to_task_dict=False)
@@ -206,12 +219,11 @@ def load_data(db_dir, db_name):
         # replace taskset in tasksets
         tasksets[i] = taskset
 
-    # convert lists to numpy arrays
-    tasksets_np = np.asarray(tasksets)
-    labels_np = np.asarray(labels, np.int32)
-
     # pad task-sets to uniform length
-    tasksets_np = _pad_sequences(tasksets_np)
+    tasksets_np = _pad_sequences(tasksets)
+
+    # convert list of labels to numpy array
+    labels_np = np.asarray(labels, np.int32)
 
     # save data shape to configuration parameters
     params.config['time_steps'] = tasksets_np.shape[1]
@@ -220,12 +232,12 @@ def load_data(db_dir, db_name):
     data = dict()  # create empty dictionary to keep all data tidy
 
     # split data into training and test/validation: 80% training data, 20% test/validation data
-    data["train_X"], test_val_x, data["train_y"], test_val_y = \
+    data['train_X'], test_val_x, data['train_y'], test_val_y = \
         sklearn.model_selection.train_test_split(tasksets_np, labels_np, test_size=0.2,
                                                  random_state=42)
 
     # split test/validation in test and validation data: 50% data each, i.e. 10% of hole dataset
-    data["test_X"], data["val_X"], data["test_y"], data["val_y"] = \
+    data['test_X'], data['val_X'], data['test_y'], data['val_y'] = \
         sklearn.model_selection.train_test_split(test_val_x, test_val_y, test_size=0.5,
                                                  random_state=42)
 
@@ -241,20 +253,18 @@ def load_data(db_dir, db_name):
 def _split_tasksets(rows):
     """Split task-sets.
 
-    This function splits a task-set consisting of [Set_ID, Successful, TASK1_ID, TASK2_ID,
-    TASK3_ID, TASK4_ID into a list with the task-set IDs, the labels and the task IDs.
+    This function splits a task-set consisting of [Set_ID, Successful, TASK1_ID, TASK2_ID, ...] into
+    two lists: a list with the tuples of task IDs and a list with the labels.
 
     Args:
         rows -- an array with the rows representing each a task-set
     Return:
-        taskset_ids -- list with the task-set IDs
         task_ids -- list with tuples of the task IDs
         labels -- list with the labels
     """
-    taskset_ids = [x[0] for x in rows]
     task_ids = [x[2:] for x in rows]
     labels = [x[1] for x in rows]
-    return taskset_ids, task_ids, labels
+    return task_ids, labels
 
 
 def _preprocess_tasks_attributes(task_attributes):
@@ -347,16 +357,14 @@ def _standardize(task_attributes):
     Return:
         task_attributes -- list with the standardized/normalized task attributes
     """
-    # standardization
-    # standardized = sklearn.preprocessing.StandardScaler().fit_transform(task_attributes)
-
     # min-max normalization
     normalized = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1)).fit_transform(
         task_attributes)
+    task_attributes = [tuple(x) for x in normalized]  # convert numpy array back to list of tuples
 
-    # convert numpy array back to list of tuples
-    # task_attributes = [tuple(x) for x in standardized]
-    task_attributes = [tuple(x) for x in normalized]
+    # standardization
+    # standardized = sklearn.preprocessing.StandardScaler().fit_transform(task_attributes)
+    # task_attributes = [tuple(x) for x in standardized]  # convert numpy array back to list of tuples
 
     return task_attributes
 
