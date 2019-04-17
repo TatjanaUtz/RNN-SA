@@ -60,7 +60,7 @@ def main():
     data = load_data(db_dir, db_name)
 
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='4')
+    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='5')
 
     # visualization of results
     #plot()
@@ -161,13 +161,14 @@ def plot():
             y.append(float(row[2]))
 
     plt.plot(x, y, 'o')
-    #plt.plot([100, 100], [0, 0.98], 'r')
+    #plt.plot([128, 128], [0, 1] , 'r--')    # vertical line
+    #plt.plot([0, 1050], [0.9575, 0.9575], 'r')  # horizontal line
 
 
     plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
-    plt.axis([0, 400, 0.88, 0.98])
-    #plt.xticks([1, 2, 3, 4, 5])
+    #plt.axis([0, 1050, 0.9, 0.96])
+    #plt.xticks([32, 64, 128, 256, 512, 1024])
 
     plt.show()
 

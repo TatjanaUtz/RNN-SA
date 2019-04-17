@@ -25,7 +25,8 @@ hparams_talos = {
     ### MODEL ###
     # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
     'num_cells': [1],  # number of LSTM cells
-    'hidden_layer_size': np.random.randint(low=27, high=1000, size=20),
+    'hidden_layer_size': [2000, 3000]
+    # np.random.randint(low=27, high=1000, size=20),
     # 'hidden_activation': [keras.activations.tanh],  # activation function to use; if you pass
     # None, no
     # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
