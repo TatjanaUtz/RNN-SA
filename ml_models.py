@@ -8,22 +8,32 @@ import tensorflow as tf
 
 
 def LSTM_model(x_train, y_train, x_val, y_val, hparams):
-    """LSTM model with Keras."""
+    """Keras LSTM model.
+
+    This method builds, compiles and trains a neural network based on LSTM cells with Keras.
+    The structure of this function (arguments and return parameters) must not be changed until Talos
+    is used.
+
+    Args:
+        x_train -- array with features for training
+        y_train -- list with labels for training
+        x_val -- array with features for validation
+        y_val -- list with labels for validation
+        hparam -- hyperparameter dictionary
+    Return:
+        out -- result of the training
+        model -- the Keras model
+    """
     from params import config  # import configuration parameters
 
-    if config['use_gpu']: # build model with GPU support
-        with tf.device('/cpu:0'):
-            model = _build_LSTM_model(hparams, config)
-        parallel_model = keras.utils.multi_gpu_model(model=model, gpus=3)
-        model = parallel_model
-    else: # build model
-        model = _build_LSTM_model(hparams, config)  # build model
+    # build the Keras model
+    model = _build_LSTM_model(hparams, config)
 
     # Configure the model for training (create optimizer and loss function)
     # for binary classification the loss function should be 'binary_crossentropy'
     model.compile(
         # String (name of optimizer) or optimizer instance
-        optimizer='adam',
+        optimizer=hparams['optimizer'],
         # String (name of objective function) or objective function (default: None)
         loss='binary_crossentropy',
         # List of metrics to be evaluated by the model during training and testing; typically
@@ -68,9 +78,11 @@ def _build_LSTM_model(hparams, config):
     # create dropout layer: applies Dropout to the input
     # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
     # during training time, which helps prevent overfitting
-    # dropout_layer = keras.layers.Dropout(
-    #     # float between 0 and 1, fraction of the input units to drop
-    #     rate=0)
+    if hparams['keep_prob'] < 1.0:
+        dropout_layer = keras.layers.Dropout(
+            # float between 0 and 1, fraction of the input units to drop
+            rate=1-hparams['keep_prob'],
+        )
 
     # only one LSTM layer: layer should specify input_shape and return only the last output
     if hparams['num_cells'] == 1:
@@ -79,7 +91,7 @@ def _build_LSTM_model(hparams, config):
             units=hparams['hidden_layer_size'],
             # activation function to use; if you pass None, no activation is applied (ie. "linear"
             # activation: a(x) = x) (default: 'tanh')
-            activation='tanh',
+            activation=hparams['hidden_activation'],
             # Boolean, whether to return the last output in the output sequence, or the full
             # sequence
             return_sequences=False,
@@ -89,7 +101,7 @@ def _build_LSTM_model(hparams, config):
         ))
 
         # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+        if hparams['keep_prob'] < 1.0: model.add(dropout_layer)
 
     # more than one LSTM layer
     else:
@@ -101,7 +113,7 @@ def _build_LSTM_model(hparams, config):
             input_shape=(config['time_steps'], config['element_size'])))
 
         # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+        if hparams['keep_prob'] < 1.0: model.add(dropout_layer)
 
         # more than two LSTM layers: hidden layers should return a sequence of outputs
         if hparams['num_cells'] > 2:
@@ -112,7 +124,7 @@ def _build_LSTM_model(hparams, config):
                     return_sequences=True))
 
                 # add dropout layer if necessary
-                # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+                if hparams['keep_prob'] < 1.0: model.add(dropout_layer)
 
         # output LSTM layer: should return only the last output
         model.add(keras.layers.LSTM(
@@ -121,75 +133,7 @@ def _build_LSTM_model(hparams, config):
             return_sequences=False))
 
         # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-    # create and add a regular densely-connected NN layer as output layer
-    # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
-    # encoding) and the activation should be 'sigmoid'
-    model.add(keras.layers.Dense(
-        # positive integer, dimensionality of the output space
-        units=config['num_classes'],
-        # activation function to use; if you don't specify anything, no activation is applied
-        # (ie. "linear" activation: a(x) = x) (default: None)
-        activation='sigmoid'))
-
-    return model
-
-def _build_LSTM_model_GPU(hparams, config):
-    # create a Sequential model
-    model = keras.models.Sequential()
-
-    # create dropout layer: applies Dropout to the input
-    # Dropout consists in randomly setting a fraction rate of input units to 0 at each update
-    # during training time, which helps prevent overfitting
-    # dropout_layer = keras.layers.Dropout(
-    #     # float between 0 and 1, fraction of the input units to drop
-    #     rate=0)
-
-    # only one LSTM layer: layer should specify input_shape and return only the last output
-    if hparams['num_cells'] == 1:
-        model.add(keras.layers.CuDNNLSTM(
-            # positive integer, dimensionality of the output space
-            units=hparams['hidden_layer_size'],
-            # Boolean, whether to return the last output in the output sequence, or the full
-            # sequence
-            return_sequences=False,
-            # expected input shape, only the first layer in a Sequential model needs to receive
-            # information about its input shape
-            input_shape=(config['time_steps'], config['element_size'])
-        ))
-
-        # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-    # more than one LSTM layer
-    else:
-        # input LSTM layer: should specify input_shape and return a sequence of outputs
-        model.add(keras.layers.CuDNNLSTM(
-            units=hparams['hidden_layer_size'],
-            return_sequences=True,
-            input_shape=(config['time_steps'], config['element_size'])))
-
-        # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-        # more than two LSTM layers: hidden layers should return a sequence of outputs
-        if hparams['num_cells'] > 2:
-            for i in range(hparams['num_cells'] - 2):
-                model.add(keras.layers.CuDNNLSTM(
-                    units=hparams['hidden_layer_size'],
-                    return_sequences=True))
-
-                # add dropout layer if necessary
-                # if params['keep_prob'] < 1.0: model.add(dropout_layer)
-
-        # output LSTM layer: should return only the last output
-        model.add(keras.layers.CuDNNLSTM(
-            units=hparams['hidden_layer_size'],
-            return_sequences=False))
-
-        # add dropout layer if necessary
-        # if params['keep_prob'] < 1.0: model.add(dropout_layer)
+        if hparams['keep_prob'] < 1.0: model.add(dropout_layer)
 
     # create and add a regular densely-connected NN layer as output layer
     # for binary classification units should be 1 or 2 (number of classes, 2 if one-hot
@@ -225,8 +169,7 @@ def _init_callbacks(params, config):
             keras.callbacks.ModelCheckpoint(
                 # path to save the model file, can contain named formatting options which will be
                 # filled with the values of epoch and keys in logs (e.g. val_loss)
-                filepath=os.path.join(config['checkpoint_dir'],
-                                      '{epoch:02d}-{val_loss:.2f}.hdf5'),
+                filepath=os.path.join(config['checkpoint_dir'], '{epoch:02d}-{val_loss:.2f}.hdf5'),
                 # quantity to monitor (default: 'val_loss')
                 monitor='val_loss',
                 verbose=config['checkpoint_verbose'],

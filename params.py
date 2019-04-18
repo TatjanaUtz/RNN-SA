@@ -13,52 +13,47 @@
                                      necessary to configure a Keras model
 """
 import numpy as np
+import keras
 
 # hyperparameter for optimization with Talos
 hparams_talos = {
     ### TRAINING ###
-    'batch_size': [128],  # size of each batch of data
-    # that is
-    # feed into the model
-    'num_epochs': [150],  # number of iterations to run the dataset through the model
+    'batch_size': [128],  # number of samples per gradient update
+    'num_epochs': [150],  # number of epochs to train the model (an epoch is an iteration over the
+    # entire data provided)
 
     ### MODEL ###
-    # 'keep_prob': [1.0],  # float between 0 and 1, fraction of the input units to drop
+    'keep_prob': [1.0],  # fraction of the input units to keep (not to drop!)
     'num_cells': [1],  # number of LSTM cells
-    'hidden_layer_size': [2000, 3000]
+    'hidden_layer_size': [2000, 3000],   # number of neurons in the LSTM layers
     # np.random.randint(low=27, high=1000, size=20),
-    # 'hidden_activation': [keras.activations.tanh],  # activation function to use; if you pass
-    # None, no
-    # activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
+    'hidden_activation': [keras.activations.tanh],  # activation function to use (must be an
+    # instance of Keras)
 
     ### COMPILE ###
-    # 'optimizer': [keras.optimizers.Adam],  # String (name of optimizer) or optimizer instance
-    # 'learning_rate': [0.0001],  # float >= 0, learning rate
+    'optimizer': [keras.optimizers.Adam],  # optimizer (must be a optimizer instance of Keras)
 }
 
 # static hyperparameter for Keras model without Talos
 hparams = {
     ### TRAINING ###
-    'batch_size': 128,  # size of each batch of data that is feed into the model
-    'num_epochs': 150,  # number of iterations to run the dataset through the model
+    'batch_size': 128,  # number of samples per gradient update
+    'num_epochs': 150,  # number of epochs to train the model (an epoch is an iteration over the
+    # entire data provided)
 
     ### MODEL ###
-    # 'keep_prob': 1.0,  # float between 0 and 1, fraction of the input units to drop
+    'keep_prob': 1.0,  # fraction of the input units to keep (not to drop!)
     'num_cells': 1,  # number of LSTM cells
-    'hidden_layer_size': 100,
-    # 'hidden_activation': [keras.activations.tanh],  # activation function to use; if you pass
-    # None, no activation is applied (ie. "linear" activation: a(x) = x) (default: 'tanh')
+    'hidden_layer_size': 200,   # number of neurons in the LSTM layers
+    'hidden_activation': 'tanh',  # activation function to use (must be an
+    # instance of Keras)
 
     ### COMPILE ###
-    # 'optimizer': [keras.optimizers.Adam],  # String (name of optimizer) or optimizer instance
-    # 'learning_rate': [0.0001],  # float >= 0, learning rate
+    'optimizer': 'adam',  # optimizer (must be a optimizer instance of Keras)
 }
 
 # general configuration parameters
 config = {
-    ### GPU support ###
-    'use_gpu': False,  # whether to use GPU(s) for training
-
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
     'use_checkpoint': False,  # whether to use the ModelCheckpoint callback
@@ -77,13 +72,12 @@ config = {
     'use_reduceLR': True,  # whether to use the ReduceLROnPlateau callback
 
     ### TRAINING ###
-    'verbose_training': 2,  # Integer, 0, 1, or 2; verbosity mode, 0 = silent, 1 = progress bar,
-    # 2 = one line per epoch (default: 1)
+    'verbose_training': 2,  # verbosity mode, 0 = silent, 1 = progress bar, 2 = one line per epoch
 
     ### EVALUATION ###
     'verbose_eval': 0,  # 0 or 1, verbosity mode, 0 = silent, 1 = progress bar
 
-    ### DATA ###
+    ### DATA SHAPE ###
     'time_steps': 4,  # number of time steps = sequence length (= maximal number of task per
     # task-set)
     'element_size': 12,  # length of each vector in the sequence (= number of attributes per task)

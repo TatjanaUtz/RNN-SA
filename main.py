@@ -59,11 +59,20 @@ def main():
     # load the data
     data = load_data(db_dir, db_name)
 
+    ##############################################
+    ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
+    ##############################################
     # hyperparameter exploration
-    h = hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='5')
+    #hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='5')
 
     # visualization of results
     #plot()
+
+    ##########################
+    ### SINGLE KERAS MODEL ###
+    ##########################
+    # train and evaluate a Keras model
+    train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
@@ -75,14 +84,12 @@ def hyperparameter_exploration(data, name, num):
         data -- a dictionary with the training, testing and validation data
         name -- name of the experiment
         num -- number of the experiment
-    Return:
-        h -- the scan object created by TALOS with several attributes for evaluation
     """
     logger = logging.getLogger('RNN-SA.main.hyperparameter_exploration')
     logger.info("Doing hyperparameter exploration...")
     start_time = time.time()
 
-    h = talos.Scan(
+    talos.Scan(
         x=data['train_X'],  # prediction features
         y=data['train_y'],  # prediction outcome variable
         params=params.hparams_talos,  # the parameter dictionary
@@ -99,22 +106,6 @@ def hyperparameter_exploration(data, name, num):
     logger.info("Finished hyperparameter exploration!")
     logger.info("Best result: ")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
-
-    return h
-
-
-def do_plotting():
-    # use filename as input
-    r = talos.Reporting('LSTM_hidden_layers_1.csv')
-
-    # heatmap correlation
-    # r.plot_corr(metric='val_acc', color_grades=5)
-
-    # a four dimensional bar grid
-    r.plot_bars(x='num_cells', y='val_acc', hue='hidden_layer_size', col='batch_size')
-
-    # show plots
-    plt.show()
 
 
 def plot():
@@ -148,8 +139,6 @@ def plot():
     # plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
     #             'hidden_size = 75', 'hidden_size = 100'))
 
-
-
     x = []
     y = []
 
@@ -161,16 +150,48 @@ def plot():
             y.append(float(row[2]))
 
     plt.plot(x, y, 'o')
-    #plt.plot([128, 128], [0, 1] , 'r--')    # vertical line
-    #plt.plot([0, 1050], [0.9575, 0.9575], 'r')  # horizontal line
-
+    plt.plot([200, 200], [0, 1] , 'r--')    # vertical line
+    plt.plot([0, 5000], [0.976, 0.976], 'r')  # horizontal line
 
     plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
-    #plt.axis([0, 1050, 0.9, 0.96])
-    #plt.xticks([32, 64, 128, 256, 512, 1024])
+    plt.axis([0, 1000, 0.88, 0.98])
+    plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
 
     plt.show()
+
+def train_and_evaluate(data):
+    """Build, train and evaluate a Keras model.
+
+    This function builds, trains and evaluates a Keras model with specific hyperparameters
+    defined by the params.hparams dictionary.
+
+    Args:
+        data -- a dictionary with the training, testing and validation data
+    """
+    logger = logging.getLogger('RNN-SA.main.train_and_evaluate')
+    logger.info("Training the Keras model...")
+    start_time = time.time()
+
+    # build, compile and train the Keras LSTM model
+    out, model = ml_models.LSTM_model(data['train_X'], data['train_y'], data['val_X'],
+                                      data['val_y'], params.hparams)
+
+    end_time = time.time()
+    logger.info("Finished training!")
+    logger.info("Time elapsed: %f s \n", end_time - start_time)
+
+    logger.info("Evaluating performance of the Keras model...")
+    start_time = time.time()
+
+    # evaluate performance of Keras model
+    loss, accuracy = model.evaluate(data['text_X'], data['text_y'], batch_size=params.hparams[
+        'batch_size'], verbose=params.config['verbose_eval'])
+    end_time = time.time()
+    logger.info("Finished evaluation!")
+    logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
+    logger.info("Time elapsed: %f s", end_time - start_time)
+
 
 
 def load_data(db_dir, db_name):
