@@ -51,7 +51,7 @@ tensorflow-estimator==1.13.0
 termcolor==1.1.0
 tqdm==4.31.1
 traitlets==4.3.2
-urllib3==1.24.1
+urllib3==1.24.2
 wcwidth==0.1.7
 Werkzeug==0.15.2
 wrangle==0.6.2
