@@ -24,8 +24,8 @@ hparams_talos = {
 
     ### MODEL ###
     'keep_prob': [1.0],  # fraction of the input units to keep (not to drop!)
-    'num_cells': [1],  # number of LSTM cells
-    'hidden_layer_size': [2000, 3000],   # number of neurons in the LSTM layers
+    'num_cells': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],  # number of LSTM cells
+    'hidden_layer_size': [319],   # number of neurons in the LSTM layers
     # np.random.randint(low=27, high=1000, size=20),
     'hidden_activation': [keras.activations.tanh],  # activation function to use (must be an
     # instance of Keras)

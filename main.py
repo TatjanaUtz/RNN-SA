@@ -16,7 +16,6 @@ import keras
 # ModuleNotFoundError: No module named '_tkinter'
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
-import matplotlib
 
 matplotlib.use('agg')
 
@@ -63,16 +62,16 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    #hyperparameter_exploration(data=data, name='LSTM_hidden_layer_size', num='5')
+    hyperparameter_exploration(data=data, name='LSTM_num_cells', num='1')
 
     # visualization of results
-    #plot()
+    # plot()
 
     ##########################
     ### SINGLE KERAS MODEL ###
     ##########################
     # train and evaluate a Keras model
-    train_and_evaluate(data)
+    # train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
@@ -104,7 +103,6 @@ def hyperparameter_exploration(data, name, num):
 
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
-    logger.info("Best result: ")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
 
 
@@ -139,26 +137,34 @@ def plot():
     # plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
     #             'hidden_size = 75', 'hidden_size = 100'))
 
-    x = []
-    y = []
+    ### SINGLE LINE PLOT ###
+    x = []  # data that should be plotted on the x-axis (a hyperparameter)
+    y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('LSTM_hidden_layer_size.csv', 'r') as csvfile:
+    with open('LSTM_hidden_layer_size.csv', 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
-        header = next(plots)
-        for row in plots:
+        header = next(plots)  # read header
+        for row in plots:  # iterate over all rows and read data
             x.append(int(row[9]))
             y.append(float(row[2]))
 
-    plt.plot(x, y, 'o')
-    plt.plot([200, 200], [0, 1] , 'r--')    # vertical line
-    plt.plot([0, 5000], [0.976, 0.976], 'r')  # horizontal line
+    plt.plot(x, y, 'o')  # line plot of y as a function of x
+    #plt.plot([200, 200], [0, 1], 'r--')  # vertical line
+    plt.plot([0, 5000], [0.977, 0.977], 'r')  # horizontal line
 
     plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
     plt.axis([0, 1000, 0.88, 0.98])
-    plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    #plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
 
     plt.show()
+
+    ### CORRELATION ###
+    # plot correlation between all hyperparameters and the validation accuracy with Talos
+    # r = talos.Reporting('LSTM_hidden_layer_size.csv')
+    # r.plot_corr()
+    # plt.show()
+
 
 def train_and_evaluate(data):
     """Build, train and evaluate a Keras model.
@@ -191,7 +197,6 @@ def train_and_evaluate(data):
     logger.info("Finished evaluation!")
     logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
     logger.info("Time elapsed: %f s", end_time - start_time)
-
 
 
 def load_data(db_dir, db_name):
