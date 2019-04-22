@@ -31,7 +31,7 @@ hparams_talos = {
     # instance of Keras)
 
     ### COMPILE ###
-    'optimizer': [keras.optimizers.Adam],  # optimizer (must be a optimizer instance of Keras)
+    'optimizer': ['adam'],  # optimizer (must be a optimizer instance of Keras)
 }
 
 # static hyperparameter for Keras model without Talos
