@@ -16,7 +16,7 @@ import keras
 # ModuleNotFoundError: No module named '_tkinter'
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
-
+import matplotlib
 matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
