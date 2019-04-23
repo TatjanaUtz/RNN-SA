@@ -3,7 +3,6 @@
 Run this file for schedulability analysis with recurrent neural network (RNN).
 """
 
-import csv
 import logging
 import random
 import time
@@ -17,9 +16,9 @@ import keras
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
 import matplotlib
+
 matplotlib.use('agg')
 
-import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 import talos
@@ -64,9 +63,6 @@ def main():
     # hyperparameter exploration
     hyperparameter_exploration(data=data, name='LSTM_keep_prob', num='1')
 
-    # visualization of results
-    #plot()
-
     ##########################
     ### SINGLE KERAS MODEL ###
     ##########################
@@ -104,66 +100,6 @@ def hyperparameter_exploration(data, name, num):
     end_time = time.time()
     logger.info("Finished hyperparameter exploration!")
     logger.info("Time elapsed: %f s \n", end_time - start_time)
-
-
-def plot():
-    hidden_size = [[0 for i in range(5)] for i in range(6)]
-    num_cells = [1, 2, 3, 4, 5]
-
-    # with open('LSTM_hidden_layers_1.csv', 'r') as csvfile:
-    #     plots = csv.reader(csvfile, delimiter=',')
-    #     header = next(plots)
-    #     for row in plots:
-    #         if int(row[9]) == 3:
-    #             hidden_size[0][int(row[8]) - 1] = float(row[2])
-    #         elif int(row[9]) == 9:
-    #             hidden_size[1][int(row[8]) - 1] = float(row[2])
-    #         elif int(row[9]) == 27:
-    #             hidden_size[2][int(row[8]) - 1] = float(row[2])
-    #         elif int(row[9]) == 50:
-    #             hidden_size[3][int(row[8]) - 1] = float(row[2])
-    #         elif int(row[9]) == 75:
-    #             hidden_size[4][int(row[8]) - 1] = float(row[2])
-    #         elif int(row[9]) == 100:
-    #             hidden_size[5][int(row[8]) - 1] = float(row[2])
-
-    # plt.plot(num_cells, hidden_size[0], 'bo-')
-    # plt.plot(num_cells, hidden_size[1], 'go-')
-    # plt.plot(num_cells, hidden_size[2], 'ro-')
-    # plt.plot(num_cells, hidden_size[3], 'yo-')
-    # plt.plot(num_cells, hidden_size[4], 'ko-')
-    # plt.plot(num_cells, hidden_size[5], 'co-')
-
-    # plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
-    #             'hidden_size = 75', 'hidden_size = 100'))
-
-    ### SINGLE LINE PLOT ###
-    x = []  # data that should be plotted on the x-axis (a hyperparameter)
-    y = []  # data that should be plotted on the y-axis (validation accuracy)
-
-    with open('LSTM_num_cells_1.csv', 'r') as csvfile:  # open csv file
-        plots = csv.reader(csvfile, delimiter=',')
-        header = next(plots)  # read header
-        for row in plots:  # iterate over all rows and read data
-            x.append(int(row[9]))
-            y.append(float(row[2]))
-
-    plt.plot(x, y, 'o')  # line plot of y as a function of x
-    #plt.plot([200, 200], [0, 1], 'r--')  # vertical line
-    plt.plot([1, 10], [0.983, 0.985], 'r')  # horizontal line
-
-    plt.xlabel('hidden_layer_size')
-    plt.ylabel('val_acc')
-    plt.axis([1, 10, 0.9, 1])
-    plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-
-    plt.show()
-
-    ### CORRELATION ###
-    # plot correlation between all hyperparameters and the validation accuracy with Talos
-    # r = talos.Reporting('LSTM_hidden_layer_size.csv')
-    # r.plot_corr()
-    # plt.show()
 
 
 def train_and_evaluate(data):
