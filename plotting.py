@@ -175,6 +175,34 @@ def plot_num_cells():
 
     plt.show()  # show all plots
 
+def plot_keep_prob():
+    """Plot validation accuracy as function of num_cells."""
+    import csv
+
+    import matplotlib.pyplot as plt
+
+    x = []  # data that should be plotted on the x-axis (a hyperparameter)
+    y = []  # data that should be plotted on the y-axis (validation accuracy)
+
+    with open('LSTM_keep_prob_1.csv', 'r') as csvfile:  # open csv file
+        plots = csv.reader(csvfile, delimiter=',')
+        header = next(plots)  # read header
+        for row in plots:  # iterate over all rows and read data
+            x.append(float(row[8]))  # hyperparameter to plot
+            y.append(float(row[2]))  # validation accuracy
+
+    plt.plot(x, y, 'o')  # line plot of y = f(x)
+    # plt.plot([128, 128], [0, 1], 'r--')  # vertical line
+    #plt.plot([0, 11], [0.9847, 0.9847], 'r')  # horizontal line
+
+    plt.xlabel('keep_prob')  # label of x-axis
+    plt.ylabel('val_acc')  # label of y-axis
+    plt.axis([0, 1, 0.95, 1])  # limits of x- and y-axis: [min_x, max_x, min_y, max_y]
+    plt.xticks([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])  # ticks of x-axis
+    # plt.yticks([0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96])  # ticks of y-axis
+
+    plt.show()  # show all plots
+
 
 if __name__ == "__main__":
-    plot_num_cells()
+    plot_keep_prob()
