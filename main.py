@@ -61,7 +61,7 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    hyperparameter_exploration(data=data, name='LSTM_keep_prob', num='1')
+    hyperparameter_exploration(data=data, name='LSTM_keep_prob', num='2')
 
     ##########################
     ### SINGLE KERAS MODEL ###

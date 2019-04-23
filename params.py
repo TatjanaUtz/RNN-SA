@@ -23,7 +23,7 @@ hparams_talos = {
     # entire data provided)
 
     ### MODEL ###
-    'keep_prob': [0.8, 0.6, 0.5, 0.4, 0.2],  # fraction of the input units to keep (not to drop!)
+    'keep_prob': [0.1, 0.3, 0.7, 0.9, 1.0],  # fraction of the input units to keep (not to drop!)
     'num_cells': [3],  # number of LSTM cells
     'hidden_layer_size': [319],   # number of neurons in the LSTM layers
     # np.random.randint(low=27, high=1000, size=20),
