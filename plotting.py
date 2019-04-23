@@ -1,41 +1,46 @@
+"""File for different plots for visualisation of the results of hyperparameter optimization.
+
+- Single Line Plot: plot the validation accuracy as a function of one hyperparamter
+- Correlation: plot correlation matrix between validation accuracy and all hyperparamters
+"""
+
+### SINGLE LINE PLOT ###
 import csv
 
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy.optimize import curve_fit
 
-### SINGLE LINE PLOT ###
 x = []  # data that should be plotted on the x-axis (a hyperparameter)
 y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-with open('hidden_layer_size\\LSTM_hidden_layer_size.csv', 'r') as csvfile:  # open csv file
+with open('LSTM_num_cells_1.csv', 'r') as csvfile:  # open csv file
     plots = csv.reader(csvfile, delimiter=',')
     header = next(plots)  # read header
     for row in plots:  # iterate over all rows and read data
-        x.append(int(row[9]))
-        y.append(float(row[2]))
+        x.append(int(row[9]))  # hyperparameter to plot
+        y.append(float(row[2]))  # validation accuracy
 
-
-def exponential_func(x, a, b, c):
-    return -a * np.exp(-b * x) + c
-
-
-popt, pcov = curve_fit(exponential_func, x, y, p0=(1, 1, 1))
-
-xx = np.linspace(0, 1000, 1000)
-yy = exponential_func(xx, 0.095, 0.02, 0.977)
-plt.plot(xx, yy, '--')
-
-plt.plot(x, y, 'o')  # line plot of y as a function of x
+plt.plot(x, y, 'o')  # line plot of y = f(x)
 # plt.plot([200, 200], [0, 1], 'r--')  # vertical line
 # plt.plot([0, 5000], [0.977, 0.977], 'r')  # horizontal line
 
-plt.xlabel('hidden_layer_size')
-plt.ylabel('val_acc')
-plt.axis([0, 1000, 0.88, 0.98])
-# plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+plt.xlabel('hidden_layer_size')  # label of x-axis
+plt.ylabel('val_acc')  # label of y-axis
+plt.axis([0, 1000, 0.88, 0.98])  # limits of x- and y-axis: [min_x, max_x, min_y, max_y]
+# plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])    # ticks of x-axis
+# plt.yticks([0.9, 0.92, 0.94, 0.96, 0.98, 1])  # ticks of y-axis
 
-plt.show()
+plt.show()  # show all plots
+
+
+### CORRELATION ###
+# plot correlation between all hyperparameters and the validation accuracy with Talos
+# import talos
+
+# r = talos.Reporting('LSTM_hidden_layer_size.csv') # open and read csv file
+
+# r.plot_corr() # plot correlation matrix
+
+# plt.show()    # show all plots
 
 
 def plot():
@@ -69,8 +74,35 @@ def plot():
     # plt.legend(('hidden_size = 3', 'hidden_size = 9', 'hidden_size = 27', 'hidden_size = 50',
     #             'hidden_size = 75', 'hidden_size = 100'))
 
-    ### CORRELATION ###
-    # plot correlation between all hyperparameters and the validation accuracy with Talos
-    # r = talos.Reporting('LSTM_hidden_layer_size.csv')
-    # r.plot_corr()
-    # plt.show()
+
+def plot_batch_size():
+    """Plot validation accuracy as function of batch_size."""
+    import csv
+
+    import matplotlib.pyplot as plt
+
+    x = []  # data that should be plotted on the x-axis (a hyperparameter)
+    y = []  # data that should be plotted on the y-axis (validation accuracy)
+
+    with open('batch_size\\LSTM_batch_size.csv', 'r') as csvfile:  # open csv file
+        plots = csv.reader(csvfile, delimiter=',')
+        header = next(plots)  # read header
+        for row in plots:  # iterate over all rows and read data
+            x.append(int(row[6]))  # hyperparameter to plot
+            y.append(float(row[2]))  # validation accuracy
+
+    plt.plot(x, y, 'o')  # line plot of y = f(x)
+    plt.plot([128, 128], [0, 1], 'r--')  # vertical line
+    plt.plot([0, 1050], [0.9574916288153964, 0.9574916288153964], 'r')  # horizontal line
+
+    plt.xlabel('batch_size')  # label of x-axis
+    plt.ylabel('val_acc')  # label of y-axis
+    plt.axis([0, 1050, 0.9, 0.96])  # limits of x- and y-axis: [min_x, max_x, min_y, max_y]
+    plt.xticks([32, 64, 128, 256, 512, 1024])    # ticks of x-axis
+    plt.yticks([0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96])  # ticks of y-axis
+
+    plt.show()  # show all plots
+
+
+if __name__ == "__main__":
+    plot_batch_size()
