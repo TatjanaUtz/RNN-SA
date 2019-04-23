@@ -62,10 +62,10 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    hyperparameter_exploration(data=data, name='LSTM_num_cells', num='1')
+    hyperparameter_exploration(data=data, name='LSTM_keep_prob', num='1')
 
     # visualization of results
-    # plot()
+    #plot()
 
     ##########################
     ### SINGLE KERAS MODEL ###
@@ -141,7 +141,7 @@ def plot():
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('LSTM_hidden_layer_size.csv', 'r') as csvfile:  # open csv file
+    with open('LSTM_num_cells_1.csv', 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -150,12 +150,12 @@ def plot():
 
     plt.plot(x, y, 'o')  # line plot of y as a function of x
     #plt.plot([200, 200], [0, 1], 'r--')  # vertical line
-    plt.plot([0, 5000], [0.977, 0.977], 'r')  # horizontal line
+    plt.plot([1, 10], [0.983, 0.985], 'r')  # horizontal line
 
     plt.xlabel('hidden_layer_size')
     plt.ylabel('val_acc')
-    plt.axis([0, 1000, 0.88, 0.98])
-    #plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    plt.axis([1, 10, 0.9, 1])
+    plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
     plt.show()
 
