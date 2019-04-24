@@ -162,7 +162,7 @@ def _init_callbacks(params, config):
 
     if config['use_checkpoint']:
         # create dir for checkpoints
-        _create_dirs([params.config['checkpoint_dir']])
+        _create_dirs([config['checkpoint_dir']])
 
         # create ModelCheckpoint: save the model after every epoch
         callbacks.append(
@@ -207,7 +207,7 @@ def _init_callbacks(params, config):
 
     if config['use_tensorboard']:
         # create dir for logs
-        _create_dirs([params.config['tensorboard_log_dir']])
+        _create_dirs([config['tensorboard_log_dir']])
 
         # create TensorBoard: TensorBoard basic visualization, writes a log for TensorBoard
         callbacks.append(
