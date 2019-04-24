@@ -14,6 +14,7 @@
 """
 import numpy as np
 import keras
+import os
 
 # hyperparameter for optimization with Talos
 hparams_talos = {
@@ -58,7 +59,8 @@ config = {
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
     'use_checkpoint': True,  # whether to use the ModelCheckpoint callback
-    'checkpoint_dir': ".\\experiments\\LSTM\\checkpoints\\",  # path to save the model file
+    'checkpoint_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "checkpoints"),  # path to
+         # the directory where to save the model file
     'checkpoint_verbose': 1,  # verbosity mode, 0 or 1 (default: 0)
 
     # EarlyStopping: stop training when a monitored quantity has stopped improving
@@ -66,8 +68,8 @@ config = {
 
     # TensorBoard: TensorBoard visualization
     'use_tensorboard': False,  # whether to use the TensorBoard callback
-    'tensorboard_log_dir': '.\\experiments\\LSTM\\logs\\',  # the path of the directory where
-    # to save the log files to be parsed by Tensorflow
+    'tensorboard_log_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "logs"),  # path to
+    # the directory where to save the log files to be parsed by TensorBoard
 
     # ReduceLROnPlateau: reduce learning rate when a metric has stopped improving
     'use_reduceLR': True,  # whether to use the ReduceLROnPlateau callback
