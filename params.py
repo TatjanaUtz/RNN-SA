@@ -43,9 +43,9 @@ hparams = {
     # entire data provided)
 
     ### MODEL ###
-    'keep_prob': 1.0,  # fraction of the input units to keep (not to drop!)
-    'num_cells': 1,  # number of LSTM cells
-    'hidden_layer_size': 200,   # number of neurons in the LSTM layers
+    'keep_prob': 0.5,  # fraction of the input units to keep (not to drop!)
+    'num_cells': 3,  # number of LSTM cells
+    'hidden_layer_size': 300,   # number of neurons in the LSTM layers
     'hidden_activation': 'tanh',  # activation function to use (must be an
     # instance of Keras)
 
@@ -57,7 +57,7 @@ hparams = {
 config = {
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
-    'use_checkpoint': False,  # whether to use the ModelCheckpoint callback
+    'use_checkpoint': True,  # whether to use the ModelCheckpoint callback
     'checkpoint_dir': ".\\experiments\\LSTM\\checkpoints\\",  # path to save the model file
     'checkpoint_verbose': 1,  # verbosity mode, 0 or 1 (default: 0)
 

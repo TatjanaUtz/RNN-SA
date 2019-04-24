@@ -61,13 +61,13 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    hyperparameter_exploration(data=data, name='LSTM_all_hyperparameters', num='1')
+    #hyperparameter_exploration(data=data, name='LSTM_all_hyperparameters', num='1')
 
     ##########################
     ### SINGLE KERAS MODEL ###
     ##########################
     # train and evaluate a Keras model
-    # train_and_evaluate(data)
+    train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
@@ -127,12 +127,17 @@ def train_and_evaluate(data):
     start_time = time.time()
 
     # evaluate performance of Keras model
-    loss, accuracy = model.evaluate(data['text_X'], data['text_y'], batch_size=params.hparams[
+    loss, accuracy = model.evaluate(data['test_X'], data['test_y'], batch_size=params.hparams[
         'batch_size'], verbose=params.config['verbose_eval'])
     end_time = time.time()
     logger.info("Finished evaluation!")
-    logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
     logger.info("Time elapsed: %f s", end_time - start_time)
+    logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
+
+    # get confusion matrix
+    y_pred = model.predict(data['test_X'])
+    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true=data['test_y'], y_pred=y_pred).ravel()
+    logger.info("tp = %d \nfp = %d \ntn = %d \nfn = %d", tp, fp, tn, fn)
 
 
 def load_data(db_dir, db_name):
