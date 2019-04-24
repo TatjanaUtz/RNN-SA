@@ -61,7 +61,7 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    hyperparameter_exploration(data=data, name='LSTM_keep_prob', num='2')
+    hyperparameter_exploration(data=data, name='LSTM_all_hyperparameters', num='1')
 
     ##########################
     ### SINGLE KERAS MODEL ###
@@ -93,7 +93,7 @@ def hyperparameter_exploration(data, name, num):
         experiment_no=num,  # used for experiment log
         x_val=data['val_X'],  # validation data for x
         y_val=data['val_y'],  # validation data for y
-        # grid_downsample=0.1,  # a float to indicate fraction for random sampling
+        grid_downsample=0.1,  # a float to indicate fraction for random sampling
         print_params=True,  # print each permutation hyperparameters
     )
 

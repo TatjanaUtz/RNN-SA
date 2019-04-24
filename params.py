@@ -18,15 +18,16 @@ import keras
 # hyperparameter for optimization with Talos
 hparams_talos = {
     ### TRAINING ###
-    'batch_size': [128],  # number of samples per gradient update
+    'batch_size': np.append(np.random.randint(low=64, high=256, size=10), [64, 128, 256]),
+                            # number of samples per gradient update
     'num_epochs': [150],  # number of epochs to train the model (an epoch is an iteration over the
     # entire data provided)
 
     ### MODEL ###
-    'keep_prob': [0.1, 0.3, 0.7, 0.9, 1.0],  # fraction of the input units to keep (not to drop!)
-    'num_cells': [3],  # number of LSTM cells
-    'hidden_layer_size': [319],   # number of neurons in the LSTM layers
-    # np.random.randint(low=27, high=1000, size=20),
+    'keep_prob': [0.4, 0.5, 0.6, 0.7, 0.8],  # fraction of the input units to keep (not to drop!)
+    'num_cells': [3, 4, 5, 6, 7, 8],  # number of LSTM cells
+    'hidden_layer_size': np.random.randint(low=100, high=400, size=10),   # number of neurons in
+    # the LSTM layers
     'hidden_activation': [keras.activations.tanh],  # activation function to use (must be an
     # instance of Keras)
 
