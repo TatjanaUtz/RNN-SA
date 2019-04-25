@@ -179,7 +179,7 @@ def _init_callbacks(params, config):
                 save_best_only=True,
                 # if True then only the model's weights will be saved, else the full model is saved
                 # (default: False)
-                save_weights_only=True,
+                save_weights_only=False,
                 # one of [auto, min, max], if save_best_only=True the decision to overwrite the
                 # current save file is made based on either the maximization or the minimization of
                 # the monitored quantity, for 'val_acc' this should be max, for 'val_loss' this
