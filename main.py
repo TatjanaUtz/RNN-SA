@@ -7,7 +7,7 @@ import logging
 import random
 import time
 
-random.seed(4)  # to make random reproducible
+random.seed(4)  # fix random seed for reproducibility
 
 import keras
 
