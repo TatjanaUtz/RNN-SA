@@ -169,7 +169,7 @@ def _init_callbacks(params, config):
             keras.callbacks.ModelCheckpoint(
                 # path to save the model file, can contain named formatting options which will be
                 # filled with the values of epoch and keys in logs (e.g. val_loss)
-                filepath=os.path.join(config['checkpoint_dir'], '{epoch:02d}-{val_loss:.2f}.hdf5'),
+                filepath=os.path.join(config['checkpoint_dir'], '{epoch:02d}-{val_acc:.2f}.hdf5'),
                 # quantity to monitor (default: 'val_loss')
                 monitor='val_acc',
                 verbose=config['checkpoint_verbose'],
