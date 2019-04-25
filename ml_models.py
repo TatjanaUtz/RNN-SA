@@ -171,7 +171,7 @@ def _init_callbacks(params, config):
                 # filled with the values of epoch and keys in logs (e.g. val_loss)
                 filepath=os.path.join(config['checkpoint_dir'], '{epoch:02d}-{val_loss:.2f}.hdf5'),
                 # quantity to monitor (default: 'val_loss')
-                monitor='val_loss',
+                monitor='val_acc',
                 verbose=config['checkpoint_verbose'],
                 # verbosity mode, 0 or 1 (default: 0)
                 # if True the latest best model according to the quantity monitored will not be
