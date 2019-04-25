@@ -134,11 +134,6 @@ def train_and_evaluate(data):
     logger.info("Time elapsed: %f s", end_time - start_time)
     logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
 
-    # get confusion matrix
-    y_pred = model.predict(data['test_X'])
-    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true=data['test_y'], y_pred=y_pred).ravel()
-    logger.info("tp = %d \nfp = %d \ntn = %d \nfn = %d", tp, fp, tn, fn)
-
 
 def load_data(db_dir, db_name):
     """Load the data from the database.
