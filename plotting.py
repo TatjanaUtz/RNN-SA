@@ -203,6 +203,14 @@ def plot_keep_prob():
 
     plt.show()  # show all plots
 
+def get_confusion_matrix():
+    """Get and plot confusion matrix (tp, fp, tn, fn) of a ML model."""
+    # get confusion matrix
+    y_pred = model.predict(data['test_X'])
+    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true=data['test_y'], y_pred=y_pred).ravel()
+    logger.info("tp = %d \nfp = %d \ntn = %d \nfn = %d", tp, fp, tn, fn)
+
+
 
 if __name__ == "__main__":
     plot_keep_prob()
