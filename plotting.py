@@ -175,6 +175,7 @@ def plot_num_cells():
 
     plt.show()  # show all plots
 
+
 def plot_keep_prob():
     """Plot validation accuracy as function of num_cells."""
     import csv
@@ -203,14 +204,42 @@ def plot_keep_prob():
 
     plt.show()  # show all plots
 
+
 def get_confusion_matrix():
     """Get and plot confusion matrix (tp, fp, tn, fn) of a ML model."""
+    import ml_models
+    from params import hparams, config
+    import os
+    import main
+    import logging
+    import sklearn
+
+    # get logger
+    logger = logging.getLogger('RNN-SA.plotting.get_confusion_matrix')
+
+    # create model
+    model = ml_models._build_LSTM_model(hparams, config)
+
+    # load weights
+    model.load_weights(os.path.join(config['checkpoint_dir'], "weights.best.hdf5"), by_name=True)
+
+    # compile model
+    model.compile(optimizer=hparams['optimizer'], loss='binary_crossentropy', metrics=['accuracy'])
+
+    # load data
+    data = main.load_data(os.getcwd(), "panda_v3.db")
+
+    # get loss and accuracy
+    loss, accuracy = model.evaluate(data['test_X'], data['test_y'],
+                                    batch_size=hparams['batch_size'],
+                                    verbose=config['verbose_eval'])
+    logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
+
     # get confusion matrix
     y_pred = model.predict(data['test_X'])
     tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true=data['test_y'], y_pred=y_pred).ravel()
     logger.info("tp = %d \nfp = %d \ntn = %d \nfn = %d", tp, fp, tn, fn)
 
 
-
 if __name__ == "__main__":
-    plot_keep_prob()
+    get_confusion_matrix()
