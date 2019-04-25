@@ -207,38 +207,29 @@ def plot_keep_prob():
 
 def get_confusion_matrix():
     """Get and plot confusion matrix (tp, fp, tn, fn) of a ML model."""
-    import ml_models
-    from params import hparams, config
+    from params import config
     import os
     import main
-    import logging
     import sklearn
-
-    # get logger
-    logger = logging.getLogger('RNN-SA.plotting.get_confusion_matrix')
-
-    # create model
-    model = ml_models._build_LSTM_model(hparams, config)
+    import keras
 
     # load weights
-    model.load_weights(os.path.join(config['checkpoint_dir'], "weights.best.hdf5"), by_name=True)
-
-    # compile model
-    model.compile(optimizer=hparams['optimizer'], loss='binary_crossentropy', metrics=['accuracy'])
+    print("Loading model...")
+    model = keras.models.load_model(os.path.join(config['checkpoint_dir'], "weights.best.hdf5"))
+    print("Model successfully loaded!")
 
     # load data
+    print("Loading data...")
     data = main.load_data(os.getcwd(), "panda_v3.db")
-
-    # get loss and accuracy
-    loss, accuracy = model.evaluate(data['test_X'], data['test_y'],
-                                    batch_size=hparams['batch_size'],
-                                    verbose=config['verbose_eval'])
-    logger.info("Loss = %f, Accuracy = %f", loss, accuracy)
+    print("Data successfully loaded!")
 
     # get confusion matrix
-    y_pred = model.predict(data['test_X'])
-    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true=data['test_y'], y_pred=y_pred).ravel()
-    logger.info("tp = %d \nfp = %d \ntn = %d \nfn = %d", tp, fp, tn, fn)
+    print("Predicting classes...")
+    y_pred = model.predict_classes(data['test_X'])
+    print("Classes successfully predicted!")
+
+    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(data['test_y'], y_pred).ravel()
+    print("tp = %d \nfp = %d \ntn = %d \nfn = %d" % (tp, fp, tn, fn))
 
 
 if __name__ == "__main__":
