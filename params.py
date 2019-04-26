@@ -46,7 +46,7 @@ hparams = {
     ### MODEL ###
     'keep_prob': 0.5,  # fraction of the input units to keep (not to drop!)
     'num_cells': 3,  # number of LSTM cells
-    'hidden_layer_size': 300,   # number of neurons in the LSTM layers
+    'hidden_layer_size': 319,   # number of neurons in the LSTM layers
     'hidden_activation': 'tanh',  # activation function to use (must be an
     # instance of Keras)
 
@@ -67,7 +67,7 @@ config = {
     'use_earlystopping': True,  # whether to use the EarlyStopping callback
 
     # TensorBoard: TensorBoard visualization
-    'use_tensorboard': False,  # whether to use the TensorBoard callback
+    'use_tensorboard': True,  # whether to use the TensorBoard callback
     'tensorboard_log_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "logs"),  # path to
     # the directory where to save the log files to be parsed by TensorBoard
 
