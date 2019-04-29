@@ -1,52 +1,14 @@
 """File for different plots for visualisation of the results of hyperparameter optimization.
 
 - Single Line Plot: plot the validation accuracy as a function of one hyperparamter
-- Correlation: plot correlation matrix between validation accuracy and all hyperparamters
+- Confusion Matrix: plot the confusion matrix of test dataset
+- Correlation Matrix: plot correlation matrix between validation accuracy and all hyperparamters
 """
 
 
-def single_line_plot():
-    ### SINGLE LINE PLOT ###
-    import csv
-
-    import matplotlib.pyplot as plt
-
-    x = []  # data that should be plotted on the x-axis (a hyperparameter)
-    y = []  # data that should be plotted on the y-axis (validation accuracy)
-
-    with open('LSTM_num_cells.csv', 'r') as csvfile:  # open csv file
-        plots = csv.reader(csvfile, delimiter=',')
-        header = next(plots)  # read header
-        for row in plots:  # iterate over all rows and read data
-            x.append(int(row[9]))  # hyperparameter to plot
-            y.append(float(row[2]))  # validation accuracy
-
-    plt.plot(x, y, 'o')  # line plot of y = f(x)
-    # plt.plot([200, 200], [0, 1], 'r--')  # vertical line
-    # plt.plot([0, 5000], [0.977, 0.977], 'r')  # horizontal line
-
-    plt.xlabel('hidden_layer_size')  # label of x-axis
-    plt.ylabel('val_acc')  # label of y-axis
-    plt.axis([0, 1000, 0.88, 0.98])  # limits of x- and y-axis: [min_x, max_x, min_y, max_y]
-    # plt.xticks([0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])    # ticks of x-axis
-    # plt.yticks([0.9, 0.92, 0.94, 0.96, 0.98, 1])  # ticks of y-axis
-
-    plt.show()  # show all plots
-
-
-def correlation():
-    ### CORRELATION ###
-    # plot correlation between all hyperparameters and the validation accuracy with Talos
-    import talos
-    import matplotlib.pyplot as plt
-
-    r = talos.Reporting('LSTM_hidden_layer_size.csv')  # open and read csv file
-
-    r.plot_corr()  # plot correlation matrix
-
-    plt.show()  # show all plots
-
-
+########################
+### Single Line Plot ###
+########################
 def plot_num_epochs():
     """Plot validation accuracy as function of num_epochs."""
     import csv
@@ -205,6 +167,9 @@ def plot_keep_prob():
     plt.show()  # show all plots
 
 
+########################
+### Confusion Matrix ###
+########################
 def get_confusion_matrix():
     """Get and plot confusion matrix (tp, fp, tn, fn) of a ML model."""
     from params import config
@@ -212,6 +177,7 @@ def get_confusion_matrix():
     import main
     import sklearn
     import keras
+    import time
 
     # load weights
     print("Loading model...")
@@ -225,11 +191,34 @@ def get_confusion_matrix():
 
     # get confusion matrix
     print("Predicting classes...")
+    start_t = time.time()
     y_pred = model.predict_classes(data['test_X'])
+    end_t = time.time()
     print("Classes successfully predicted!")
+    print("Time elapsed: %f s \n" % (end_t - start_t))
 
     tn, fp, fn, tp = sklearn.metrics.confusion_matrix(data['test_y'], y_pred).ravel()
-    print("tp = %d \nfp = %d \ntn = %d \nfn = %d" % (tp, fp, tn, fn))
+    print("            | task-set schedulable | task-set not schedulable")
+    print("-------------------------------------------------------------")
+    print("SA positive | tp = %d              | fp = %d" %(tp, fp))
+    print("-------------------------------------------------------------")
+    print("SA negative | fn = %d              | tn = %d" %(fn, tn))
+
+
+##########################
+### Correlation Matrix ###
+##########################
+def get_correlation_matrix():
+    ### CORRELATION ###
+    # plot correlation between all hyperparameters and the validation accuracy with Talos
+    import talos
+    import matplotlib.pyplot as plt
+
+    r = talos.Reporting('LSTM_hidden_layer_size.csv')  # open and read csv file
+
+    r.plot_corr()  # plot correlation matrix
+
+    plt.show()  # show all plots
 
 
 if __name__ == "__main__":
