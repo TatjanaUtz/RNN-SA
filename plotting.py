@@ -4,6 +4,17 @@
 - Confusion Matrix: plot the confusion matrix of test dataset
 - Correlation Matrix: plot correlation matrix between validation accuracy and all hyperparamters
 """
+import csv
+import os
+import time
+
+import keras
+import matplotlib.pyplot as plt
+import sklearn
+import talos
+
+import main
+from params import config
 
 
 ########################
@@ -11,14 +22,11 @@
 ########################
 def plot_num_epochs():
     """Plot validation accuracy as function of num_epochs."""
-    import csv
-
-    import matplotlib.pyplot as plt
-
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('num_epochs\\LSTM_num_epochs.csv', 'r') as csvfile:  # open csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_num_epochs.csv")
+    with open(filepath, 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -40,14 +48,11 @@ def plot_num_epochs():
 
 def plot_batch_size():
     """Plot validation accuracy as function of batch_size."""
-    import csv
-
-    import matplotlib.pyplot as plt
-
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('batch_size\\LSTM_batch_size.csv', 'r') as csvfile:  # open csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_batch_size.csv")
+    with open(filepath, 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -69,14 +74,11 @@ def plot_batch_size():
 
 def plot_hidden_layer_size():
     """Plot validation accuracy as function of hidden_layer_size."""
-    import csv
-
-    import matplotlib.pyplot as plt
-
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('hidden_layer_size\\LSTM_hidden_layer_size.csv', 'r') as csvfile:  # open csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_hidden_layer_size.csv")
+    with open(filepath, 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -111,14 +113,11 @@ def plot_hidden_layer_size():
 
 def plot_num_cells():
     """Plot validation accuracy as function of num_cells."""
-    import csv
-
-    import matplotlib.pyplot as plt
-
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('num_cells\\LSTM_num_cells.csv', 'r') as csvfile:  # open csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_num_cells.csv")
+    with open(filepath, 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -140,14 +139,11 @@ def plot_num_cells():
 
 def plot_keep_prob():
     """Plot validation accuracy as function of num_cells."""
-    import csv
-
-    import matplotlib.pyplot as plt
-
     x = []  # data that should be plotted on the x-axis (a hyperparameter)
     y = []  # data that should be plotted on the y-axis (validation accuracy)
 
-    with open('LSTM_keep_prob.csv', 'r') as csvfile:  # open csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_keep_prob.csv")
+    with open(filepath, 'r') as csvfile:  # open csv file
         plots = csv.reader(csvfile, delimiter=',')
         header = next(plots)  # read header
         for row in plots:  # iterate over all rows and read data
@@ -172,13 +168,6 @@ def plot_keep_prob():
 ########################
 def get_confusion_matrix():
     """Get and plot confusion matrix (tp, fp, tn, fn) of a ML model."""
-    from params import config
-    import os
-    import main
-    import sklearn
-    import keras
-    import time
-
     # load weights
     print("Loading model...")
     model = keras.models.load_model(os.path.join(config['checkpoint_dir'], "weights.best.hdf5"))
@@ -189,7 +178,7 @@ def get_confusion_matrix():
     data = main.load_data(os.getcwd(), "panda_v3.db")
     print("Data successfully loaded!")
 
-    # get confusion matrix
+    # get predictions
     print("Predicting classes...")
     start_t = time.time()
     y_pred = model.predict_classes(data['test_X'])
@@ -197,12 +186,13 @@ def get_confusion_matrix():
     print("Classes successfully predicted!")
     print("Time elapsed: %f s \n" % (end_t - start_t))
 
+    # get and print confusion matrix
     tn, fp, fn, tp = sklearn.metrics.confusion_matrix(data['test_y'], y_pred).ravel()
     print("            | task-set schedulable | task-set not schedulable")
     print("-------------------------------------------------------------")
-    print("SA positive | tp = %d              | fp = %d" %(tp, fp))
+    print("SA positive | tp = %d              | fp = %d" % (tp, fp))
     print("-------------------------------------------------------------")
-    print("SA negative | fn = %d              | tn = %d" %(fn, tn))
+    print("SA negative | fn = %d              | tn = %d" % (fn, tn))
 
 
 ##########################
@@ -211,10 +201,8 @@ def get_confusion_matrix():
 def get_correlation_matrix():
     ### CORRELATION ###
     # plot correlation between all hyperparameters and the validation accuracy with Talos
-    import talos
-    import matplotlib.pyplot as plt
-
-    r = talos.Reporting('LSTM_hidden_layer_size.csv')  # open and read csv file
+    filepath = os.path.join(os.getcwd(), "experiments", "LSTM", "LSTM_all_experiments.csv")
+    r = talos.Reporting(filepath)  # open and read csv file
 
     r.plot_corr()  # plot correlation matrix
 
@@ -222,4 +210,12 @@ def get_correlation_matrix():
 
 
 if __name__ == "__main__":
-    get_confusion_matrix()
+    # plot_num_epochs()
+    # plot_batch_size()
+    # plot_hidden_layer_size()
+    # plot_num_cells()
+    # plot_keep_prob()
+
+    # get_confusion_matrix()
+
+    get_correlation_matrix()
