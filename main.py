@@ -156,7 +156,8 @@ def load_data(db_dir, db_name):
         return None
 
     # read table 'CorrectTaskSet'
-    rows = my_database.read_table_correcttaskset()
+    #rows = my_database.read_table_correcttaskset()
+    rows = my_database.read_table_taskset(convert=False)
     random.shuffle(rows)  # shuffle rows
 
     # split task-sets into task-set IDs, the task-sets (tuples of task IDs) and labels
