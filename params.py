@@ -58,7 +58,7 @@ hparams = {
 config = {
     ### CALLBACKS ###
     # ModelCheckpoint: saves the model after every epoch
-    'use_checkpoint': True,  # whether to use the ModelCheckpoint callback
+    'use_checkpoint': False,  # whether to use the ModelCheckpoint callback
     'checkpoint_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "checkpoints"),  # path to
          # the directory where to save the model file
     'checkpoint_verbose': 1,  # verbosity mode, 0 or 1 (default: 0)
@@ -67,7 +67,7 @@ config = {
     'use_earlystopping': True,  # whether to use the EarlyStopping callback
 
     # TensorBoard: TensorBoard visualization
-    'use_tensorboard': True,  # whether to use the TensorBoard callback
+    'use_tensorboard': False,  # whether to use the TensorBoard callback
     'tensorboard_log_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "logs"),  # path to
     # the directory where to save the log files to be parsed by TensorBoard
 
