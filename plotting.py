@@ -9,6 +9,8 @@ import os
 import time
 
 import keras
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
@@ -180,18 +182,19 @@ def get_confusion_matrix():
     print("Data successfully loaded!")
 
     # stack all datasets together
-    dataset = np.concatenate((data['train_X'], data['val_X'], data['test_X']), axis=0)
+    dataset_X = np.concatenate((data['train_X'], data['val_X'], data['test_X']), axis=0)
+    dataset_y = np.concatenate((data['train_y'], data['val_y'], data['test_y']), axis=0)
 
     # get predictions
     print("Predicting classes...")
     start_t = time.time()
-    y_pred = model.predict_classes(dataset)
+    y_pred = model.predict_classes(dataset_X)
     end_t = time.time()
     print("Classes successfully predicted!")
     print("Time elapsed: %f s \n" % (end_t - start_t))
 
     # get and print confusion matrix
-    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(data['test_y'], y_pred).ravel()
+    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(dataset_y, y_pred).ravel()
     print("            | task-set schedulable | task-set not schedulable")
     print("-------------------------------------------------------------")
     print("SA positive | tp = %d              | fp = %d" % (tp, fp))
