@@ -10,6 +10,7 @@ import time
 
 import keras
 import matplotlib.pyplot as plt
+import numpy as np
 import sklearn
 import talos
 
@@ -178,10 +179,13 @@ def get_confusion_matrix():
     data = main.load_data(os.getcwd(), "panda_v3.db")
     print("Data successfully loaded!")
 
+    # stack all datasets together
+    dataset = np.concatenate((data['train_X'], data['val_X'], data['test_X']), axis=0)
+
     # get predictions
     print("Predicting classes...")
     start_t = time.time()
-    y_pred = model.predict_classes(data['test_X'])
+    y_pred = model.predict_classes(dataset)
     end_t = time.time()
     print("Classes successfully predicted!")
     print("Time elapsed: %f s \n" % (end_t - start_t))
@@ -216,6 +220,6 @@ if __name__ == "__main__":
     # plot_num_cells()
     # plot_keep_prob()
 
-    # get_confusion_matrix()
+    get_confusion_matrix()
 
-    get_correlation_matrix()
+    # get_correlation_matrix()
