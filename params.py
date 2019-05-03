@@ -85,6 +85,4 @@ config = {
     # task-set)
     'element_size': 12,  # length of each vector in the sequence (= number of attributes per task)
     'num_classes': 1,  # number of classes, binary classification, labels are in one column
-
-    ### GPU SUPPORT ###
 }

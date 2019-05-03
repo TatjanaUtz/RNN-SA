@@ -25,18 +25,13 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
         model -- the Keras model
     """
     from params import config  # import configuration parameters
-    logger = logging.getLogger('RNN-SA.ml_models.LSTM_model')
 
     # build the Keras model
-    with tf.device('/cpu:0'):
-        model = _build_LSTM_model(hparams, config)
-
-    # create model for multiple GPUs if available
-    parallel_model = keras.utils.multi_gpu_model(model, gpus=3)
+    model = _build_LSTM_model(hparams, config)
 
     # Configure the model for training (create optimizer and loss function)
     # for binary classification the loss function should be 'binary_crossentropy'
-    parallel_model.compile(
+    model.compile(
         # String (name of optimizer) or optimizer instance
         optimizer=hparams['optimizer'],
         # String (name of objective function) or objective function (default: None)
@@ -46,7 +41,7 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
         metrics=['accuracy'])
 
     # train model
-    out = parallel_model.fit(
+    out = model.fit(
         # Numpy array of training data
         x=x_train,
         # Numpy array of target (label) data
@@ -73,7 +68,7 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
         shuffle=True,
     )
 
-    return out, parallel_model
+    return out, model
 
 
 def _build_LSTM_model(hparams, config):
