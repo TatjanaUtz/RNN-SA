@@ -32,7 +32,7 @@ def LSTM_model(x_train, y_train, x_val, y_val, hparams):
 
     # create model for multiple GPUs if available
     try:
-        parallel_model = keras.utils.multi_gpu_model(model, cpu_relocation=True)
+        parallel_model = keras.utils.multi_gpu_model(model, gpus=3, cpu_relocation=True)
         logger.info("Training using multiple GPUs...")
     except:
         parallel_model = model
