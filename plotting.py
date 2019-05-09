@@ -10,9 +10,9 @@ import time
 
 import keras
 import matplotlib
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-import numpy as np
 import sklearn
 import talos
 
@@ -219,6 +219,6 @@ if __name__ == "__main__":
     # plot_num_cells()
     # plot_keep_prob()
 
-    get_confusion_matrix()
+    # get_confusion_matrix()
 
-    # get_correlation_matrix()
+    get_correlation_matrix()
