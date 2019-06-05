@@ -10,14 +10,16 @@ import time
 random.seed(4)  # fix random seed for reproducibility
 
 import keras
-
+import os
 # this lines are needed for systems without the python3-tk package to avoid the following errors:
 # ModuleNotFoundError: No module named '_tkinter'
 # Import Error: No module named '_tkinter', please install the python3-tk package
 # GUI backends on Linux: Qt4Agg, GTKAgg, WXagg, TKAgg, GTK3Agg
 import matplotlib
 
-matplotlib.use('agg')
+if os.environ.get('DISPLAY', '') == '':
+    print('no display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import numpy as np
 import sklearn
@@ -67,7 +69,7 @@ def main():
     ### SINGLE KERAS MODEL ###
     ##########################
     # train and evaluate a Keras model
-    #train_and_evaluate(data)
+    # train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
@@ -93,7 +95,7 @@ def hyperparameter_exploration(data, name, num):
         experiment_no=num,  # used for experiment log
         x_val=data['val_X'],  # validation data for x
         y_val=data['val_y'],  # validation data for y
-        grid_downsample=0.1,  # a float to indicate fraction for random sampling
+        # grid_downsample=0.1,  # a float to indicate fraction for random sampling
         print_params=True,  # print each permutation hyperparameters
     )
 
