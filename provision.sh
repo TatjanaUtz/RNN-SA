@@ -13,5 +13,8 @@ sudo apt-get -y install python3.6
 sudo apt-get -y install python3-pip
 python3.6 -m pip install --upgrade pip
 
+# Install tkinter
+sudo apt-get -y install python3.6-tk
+
 # Install requirements
 pip install --user -r /vagrant/requirements.txt

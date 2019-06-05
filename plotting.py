@@ -11,7 +11,10 @@ import time
 import keras
 import matplotlib
 
-matplotlib.use('agg')
+if os.environ.get('DISPLAY', '') == '':
+    print('no display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import sklearn
 import talos
@@ -213,12 +216,12 @@ def get_correlation_matrix():
 
 
 if __name__ == "__main__":
-    # plot_num_epochs()
-    # plot_batch_size()
-    # plot_hidden_layer_size()
-    # plot_num_cells()
-    # plot_keep_prob()
+    plot_num_epochs()
+    plot_batch_size()
+    plot_hidden_layer_size()
+    plot_num_cells()
+    plot_keep_prob()
 
-    # get_confusion_matrix()
+    get_confusion_matrix()
 
     get_correlation_matrix()
