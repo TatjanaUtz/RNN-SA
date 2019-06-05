@@ -69,7 +69,7 @@ def main():
     ### SINGLE KERAS MODEL ###
     ##########################
     # train and evaluate a Keras model
-    # train_and_evaluate(data)
+    train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
