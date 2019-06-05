@@ -61,13 +61,13 @@ def main():
     ### HYPERPARAMETER OPTIMIZATION WITH TALOS ###
     ##############################################
     # hyperparameter exploration
-    #hyperparameter_exploration(data=data, name='LSTM_all_hyperparameters', num='1')
+    hyperparameter_exploration(data=data, name='test', num='1')
 
     ##########################
     ### SINGLE KERAS MODEL ###
     ##########################
     # train and evaluate a Keras model
-    train_and_evaluate(data)
+    #train_and_evaluate(data)
 
 
 def hyperparameter_exploration(data, name, num):
