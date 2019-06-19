@@ -223,13 +223,13 @@ def _init_callbacks(params, config):
                 batch_size=params['batch_size'],
                 # whether to visualize the graph in TensorBoard, the log file can become quite large
                 # when write_graph is set to True (default: True)
-                write_graph=False,
+                write_graph=True,
                 # whether to visualize gradient histograms in TensorBoard, histogram_freq must be
                 # greater than 0 (default: False)
                 write_grads=True,
                 # whether to write model weights to visualize as image in TensorBoard
                 # (default: False)
-                write_images=False,
+                write_images=True,
                 # frequency (in epochs) at which selected embedding layers will be saved, if set to
                 # 0 embeddings won't be computed, data to be visualized in TensorBoard's Embedding
                 # tab must be passed as embeddings_data (default: 0)

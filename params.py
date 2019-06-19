@@ -67,7 +67,7 @@ config = {
     'use_earlystopping': True,  # whether to use the EarlyStopping callback
 
     # TensorBoard: TensorBoard visualization
-    'use_tensorboard': False,  # whether to use the TensorBoard callback
+    'use_tensorboard': True,  # whether to use the TensorBoard callback
     'tensorboard_log_dir': os.path.join(os.getcwd(), "experiments", "LSTM", "logs"),  # path to
     # the directory where to save the log files to be parsed by TensorBoard
 
