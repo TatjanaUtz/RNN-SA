@@ -93,3 +93,14 @@ Currently there are the following plotting functions available:
 - plot a single hyperparameter (single line plot)
 - plot the confusion matrix
 - plot the correlation matrix
+
+# Best Model
+The result of my hyperparameter exploration, i.e. the best model (best hyperparameter 
+combination) if found, is saved in the directory 
+```bash
+\experiments\LSTM\checkpoints\weights.best.hdf5
+```
+The results of my hyperparameter experiments are saved in the csv-files in the directory
+```bash
+\experiments\LSTM\
+```
