@@ -3,8 +3,6 @@ This project is part of my master thesis at the Technical University Munich and 
 # Recurrent Neural Network (RNN) based Schedulability Analysis
 Schedulability analysis (SA) using a recurrent neural network (RNN). 
 
-
-
 # Data
 The Task-Sets are given through a SQL-database with the following three tables:
 
