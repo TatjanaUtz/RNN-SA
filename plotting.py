@@ -11,8 +11,8 @@ import time
 import keras
 import matplotlib
 
-if os.environ.get('DISPLAY', '') == '':
-    print('no display found. Using non-interactive Agg backend')
+if os.name == 'posix' and "DISPLAY" not in os.environ:
+    print('No display found. Using non-interactive Agg backend')
     matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
